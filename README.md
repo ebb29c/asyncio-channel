@@ -1,5 +1,8 @@
 # asyncio-channel
 
+[![Build Status](https://travis-ci.org/ebb29c/asyncio-channel.svg?branch=master)](https://travis-ci.org/ebb29c/asyncio-channel)
+[![codecov](https://codecov.io/gh/ebb29c/asyncio-channel/branch/master/graph/badge.svg)](https://codecov.io/gh/ebb29c/asyncio-channel)
+
 Asynchronous channels for communication and synchronization between `asyncio` coroutines.
 
 ```python
