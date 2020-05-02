@@ -30,6 +30,14 @@ Also contains several utilities for piping items between channels, mixing multip
 
 See the full [API docs](docs/api.md)
 
+## Install
+
+From [pypi](https://pypi.org/project/asyncio-channel)
+
+```sh
+$ pip install asyncio-channel
+```
+
 ## Setup for development
 
 *Tip*: Use [pyenv](https://github.com/pyenv/pyenv) and [virtualenv](https://virtualenv.pypa.io/en/latest).
