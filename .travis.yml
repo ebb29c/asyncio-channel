@@ -14,10 +14,14 @@ jobs:
 before_install:
   - python --version
   - pip install --upgrade pip
+  - pip install codecov
 
 install:
   - make install
 
 script:
-  - make test-cov
+  - make test-cov-xml
+
+after_success:
+  - codecov
 
