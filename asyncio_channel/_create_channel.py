@@ -14,5 +14,5 @@ def create_channel(n_or_buffer=1):
     if isinstance(n_or_buffer, int):
         buf = create_blocking_buffer(n_or_buffer)
     elif buf.maxsize < 1:
-        raise ValueError(f'buffer maxsize must be a positive integer')
+        raise ValueError('buffer maxsize must be a positive integer')
     return Channel(buf)

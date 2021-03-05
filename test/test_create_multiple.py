@@ -103,3 +103,32 @@ async def test_remove_all_outputs():
     assert out2.empty()
     src.close()
     await asyncio.sleep(0.05)
+
+def test_input_has_item_no_outputs():
+    """
+    See https://github.com/ebb29c/asyncio-channel/issues/1
+
+    GIVEN
+        A ChannelMultiple with no output channels.
+    WHEN
+        An item is put on the input channel.
+    EXPECT
+        The item is removed from the input channel and no error is raised.
+    """
+    async def start():
+        exceptions = []
+        def capture_exceptions(loop, context):
+            exceptions.append(context['exception'])
+
+        asyncio.get_running_loop().set_exception_handler(capture_exceptions)
+
+        src = create_channel()
+        mult = create_multiple(src)
+        await src.put(42)
+        await asyncio.sleep(0.05)
+        assert src.empty()
+
+        return exceptions
+
+    exceptions = asyncio.run(start())
+    assert not exceptions

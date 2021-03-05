@@ -19,7 +19,8 @@ async def _start(src, outs, done, _put=_put, _wait_all=wait_all):
             break
 
         x = src.poll()
-        await wait_all(*(_put(ch, x) for ch, _ in outs))
+        if outs:
+            await wait_all(*(_put(ch, x) for ch, _ in outs))
 
     # Close output channels.
     for ch, close in outs:

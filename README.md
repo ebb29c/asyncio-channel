@@ -44,7 +44,7 @@ $ pip install asyncio-channel
 
 ```sh
 $ mkdir asyncio-channel-fork
-$ cd assyncio-channel-fork
+$ cd asyncio-channel-fork
 $ pyenv local 3.7.4
 $ virtualenv .
 $ . bin/activate
