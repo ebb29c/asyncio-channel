@@ -13,6 +13,8 @@ All public symbols are available from top-level `asyncio_channel` package.
 - [create_multiple](#create_multiple)
 - [create_publication](#create_publication)
 - [create_sliding_buffer](#create_sliding_buffer)
+- [itermerge](#itermerge)
+- [iterzip](#iterzip)
 - [map](#map)
 - [merge](#merge)
 - [onto_channel](#onto_channel)
@@ -22,9 +24,7 @@ All public symbols are available from top-level `asyncio_channel` package.
 - [shield_from_read](#shield_from_read)
 - [shield_from_write](#shield_from_write)
 - [split](#split)
-- [take](#take)
 - [to_channel](#to_channel)
-- [zip](#zip)
 
 ---
 
@@ -345,6 +345,34 @@ ch.poll()   # => 9
 
 ---
 
+<a name="itermerge"></a>
+`asyncio_channel.itermerge(*chs)`
+
+Get an asynchronous iterator that yields the first item taken from any of the channels, then the next item taken, and so on until all channels are closed and empty.
+
+```python
+async for a_or_b in itermerge(cha, chb):
+	print(f'got {a_or_b}')
+```
+
+[Index &uarr;](#index)
+
+---
+
+<a name="iterzip"></a>
+`asyncio_channel.iterzip(*chs)`
+
+Get an asynchronous iterator that first yields a tuple containing the first items taken from each channel in `chs`, next a tuple containing the second items taken from each channel, and so on until one or more channels is closed and empty.
+
+```python
+async for a, b in iterzip(cha, chb):
+	print(f'got {a} and {b}')
+```
+
+[Index &uarr;](#index)
+
+---
+
 <a name="map"></a>
 `asyncio_channel.map(fn, chs, n_or_buffer=1)`
 
@@ -503,20 +531,6 @@ async for odd in odds:
 
 ---
 
-<a name="take"></a>
-`asyncio_channel.take(*chs)`
-
-Get an asynchronous iterator that yields the first item taken from any of the channels, then the next item taken, and so on until all channels are closed and empty.
-
-```python
-async for a_or_b in take(cha, chb):
-	print(f'got {a_or_b}')
-```
-
-[Index &uarr;](#index)
-
----
-
 <a name="to_channel"></a>
 `asyncio_channel.to_channel(collection)`
 
@@ -528,20 +542,6 @@ nums = to_channel(range(10))
 
 async for n in nums:
 	# 0, 1, 2, ...
-```
-
-[Index &uarr;](#index)
-
----
-
-<a name="zip"></a>
-`asyncio_channel.zip(*chs)`
-
-Get an asynchronous iterator that first yields a tuple containing the first items taken from each channel in `chs`, next a tuple containing the second items taken from each channel, and so on until one or more channels is closed and empty.
-
-```python
-async for a, b in zip(cha, chb):
-	print(f'got {a} and {b}')
 ```
 
 [Index &uarr;](#index)
