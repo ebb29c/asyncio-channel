@@ -258,7 +258,7 @@ class ChannelMix(ReprMixin):
             new_srcs[ch_id] = src
 
         if not self._done:
-            self._srcs = new_srcs
+            self._srcs.update(new_srcs)
             self._update()
 
     def _update(self):

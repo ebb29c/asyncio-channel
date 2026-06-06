@@ -330,6 +330,32 @@ async def test_mute_restart():
     await asyncio.sleep(0.05)  # Give mix a chance to clean up.
 
 @pytest.mark.asyncio
+async def test_toggle_preserves_unmentioned_channels():
+    """
+    GIVEN
+        A mix with two input channels.
+    WHEN
+        toggle() is called with only one of them.
+    EXPECT
+        The other channel is still active in the mix.
+    """
+    out = create_channel(10)
+    m = create_mix(out)
+    ch1 = create_channel()
+    ch2 = create_channel()
+    m.add_input(ch1)
+    m.add_input(ch2)
+    # Toggle only ch1 — ch2 must remain in the mix unchanged.
+    m.toggle(ch1, {'mute': True})
+    # Items on ch2 should still flow to out.
+    assert ch2.offer('from-ch2')
+    result = await out.take(timeout=1.0)
+    assert result == 'from-ch2'
+    out.close()
+    await asyncio.wait_for(out.closed(), timeout=1.0)
+
+
+@pytest.mark.asyncio
 async def test_mix_empty_mute_list_no_crash():
     """
     GIVEN
