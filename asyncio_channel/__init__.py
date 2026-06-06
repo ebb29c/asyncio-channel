@@ -5,10 +5,10 @@ __all__ = ('ProhibitedOperationError', 'complete_one',
            'create_sliding_buffer', 'create_channel', 'create_mix',
            'create_multiple', 'create_publication', 'itermerge',
            'iterzip', 'merge', 'map', 'onto_channel', 'to_channel',
-           'pipe', 'reduce', 'shield_from_close', 'shield_from_read',
-           'shield_from_write', 'split')
+           'pipe', 'reduce', 'set_exception_handler', 'shield_from_close',
+           'shield_from_read', 'shield_from_write', 'split')
 
-__version__ = '0.9.1'
+__version__ = '0.9.2'
 
 from ._complete_one import complete_one
 from ._buffer import (create_blocking_buffer, create_dropping_buffer,
@@ -26,3 +26,4 @@ from ._reduce import reduce
 from ._shield import (ProhibitedOperationError, shield_from_close,
                       shield_from_read, shield_from_write)
 from ._split import split
+from ._util import set_exception_handler

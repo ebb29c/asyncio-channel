@@ -3,7 +3,7 @@ __all__ = ('create_multiple',)
 from asyncio import create_task
 
 from ._mixin import ReprMixin
-from ._util import wait_all
+from ._util import _task_done_callback, wait_all
 
 
 async def _put(ch, x):
@@ -14,13 +14,20 @@ async def _put(ch, x):
 
 
 async def _start(src, outs, done, _put=_put, _wait_all=wait_all):
-    while True:
-        if not await src.item():
-            break
+    try:
+        while True:
+            if not await src.item():
+                break
 
-        x = src.poll()
-        if outs:
-            await wait_all(*(_put(ch, x) for ch, _ in outs))
+            x = src.poll()
+            if outs:
+                await wait_all(*(_put(ch, x) for ch, _ in outs))
+    except Exception:
+        for ch, close in outs:
+            if close:
+                ch.close()
+        done()
+        raise
 
     # Close output channels.
     for ch, close in outs:
@@ -39,10 +46,12 @@ class ChannelMultiple(ReprMixin):
     """
 
     def __init__(self, src, *,
-                 _start=_start, _create_task=create_task):
+                 _start=_start, _create_task=create_task,
+                 _task_done_callback=_task_done_callback):
         self._outs = outs = []
         self._done = False
-        _create_task(_start(src, outs, self._notify))
+        task = _create_task(_start(src, outs, self._notify))
+        task.add_done_callback(_task_done_callback)
 
     def add_output(self, ch, *, close=True):
         """In the future, copy items put on src to ch.

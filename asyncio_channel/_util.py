@@ -1,6 +1,39 @@
-__all__ = ('wait_all', 'wait_first')
+__all__ = ('wait_all', 'wait_first', 'set_exception_handler')
 
+import logging
 from asyncio import FIRST_COMPLETED, CancelledError, Task, create_task, wait
+
+_logger = logging.getLogger(__name__)
+
+
+def _default_exception_handler(exc, task):
+    _logger.error(
+        'Unhandled exception in background task %r', task, exc_info=exc,
+    )
+
+
+_exception_handler = _default_exception_handler
+
+
+def set_exception_handler(fn):
+    """Register a callable invoked when a background task raises an exception.
+
+    fn(exc, task) receives the exception and the asyncio.Task.  Pass None to
+    suppress reporting entirely.  The default handler logs via the
+    asyncio_channel._util logger.
+    """
+    global _exception_handler
+    _exception_handler = fn
+
+
+def _task_done_callback(task):
+    """Attached as a done-callback to background tasks that have no output
+    channel to close on failure.  Forwards exceptions to the registered
+    exception handler."""
+    if not task.cancelled() and task.exception() is not None:
+        handler = _exception_handler
+        if handler is not None:
+            handler(task.exception(), task)
 
 
 async def wait_all(

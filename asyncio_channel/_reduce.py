@@ -3,20 +3,25 @@ __all__ = ('reduce',)
 from asyncio import create_task
 
 from ._create_channel import create_channel
+from ._util import _task_done_callback
 
 
 async def _reduce(out, fn, ch, init):
     """Reduce items from channel."""
-    acc = init
-    async for x in ch:
-        acc = fn(acc, x)
-
-    await out.put(acc)
-    out.close()
+    try:
+        acc = init
+        async for x in ch:
+            acc = fn(acc, x)
+        await out.put(acc)
+        out.close()
+    except Exception:
+        out.close()
+        raise
 
 
 def reduce(fn, ch, init=None, *,
-           _create_channel=create_channel, _create_task=create_task):
+           _create_channel=create_channel, _create_task=create_task,
+           _task_done_callback=_task_done_callback):
     """Reduce items taken from channel.
 
     Returns a new channel which will receive the result, or init if
@@ -28,5 +33,6 @@ def reduce(fn, ch, init=None, *,
     on the returned channel.
     """
     out = _create_channel()
-    _create_task(_reduce(out, fn, ch, init))
+    task = _create_task(_reduce(out, fn, ch, init))
+    task.add_done_callback(_task_done_callback)
     return out

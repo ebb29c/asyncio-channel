@@ -20,6 +20,7 @@ All public symbols are available from top-level `asyncio_channel` package.
 - [onto_channel](#onto_channel)
 - [pipe](#pipe)
 - [reduce](#reduce)
+- [set_exception_handler](#set_exception_handler)
 - [shield_from_close](#shield_from_close)
 - [shield_from_read](#shield_from_read)
 - [shield_from_write](#shield_from_write)
@@ -378,6 +379,8 @@ async for a, b in iterzip(cha, chb):
 
 Get a new channel where each put item is the result of `fn` applied to the set of items taken from all channels in `chs`.  The channel is created by calling [create_channel()](#create_channel) with `n_or_buffer`, and is closed when any input channel is closed.
 
+If an exception occurs in the background task (including one raised by `fn`), the output channel is closed and the exception is forwarded to the [exception handler](#set_exception_handler).
+
 ```python
 a = create_channel()
 b = create_channel()
@@ -397,6 +400,8 @@ await out.take()  # => 7
 `asyncio_channel.merge(chs, n_or_buffer=1)`
 
 Get a new channel that merges multiple channels.  The channel is created by calling [create_channel()](#create_channel) with `n_or_buffer`, and is closed when all input channels are closed.
+
+If an exception occurs in the background transfer task, the output channel is closed and the exception is forwarded to the [exception handler](#set_exception_handler).
 
 ```python
 a = create_channel()
@@ -438,6 +443,8 @@ async for x in ch:
 
 Take items from `src` and put on `dest` until either `dest` is closed or `srcs` is closed and empty.  If `close` is `True` then `dest` will be closed when `src` is closed.
 
+If an exception occurs in the background transfer task, `dest` is closed and the exception is forwarded to the [exception handler](#set_exception_handler).
+
 ```python
 a = create_channel()
 b = create_channel()
@@ -461,12 +468,40 @@ Get a new channel which will receive the result of reducing items taken from `ch
 
 When `ch` is closed, the last result of calling `fn`, or `init` if no item was taken, is put on the returned channel.  The channel will then be closed.
 
+If an exception occurs in the background task (including one raised by `fn`), the output channel is closed and the exception is forwarded to the [exception handler](#set_exception_handler).
+
 ```python
 onto_channel(range(10), ch)
 
 out = reduce(operator.add, ch, 0)
 
 await out.take()  # => 45
+```
+
+[Index &uarr;](#index)
+
+---
+
+<a name="set_exception_handler"></a>
+`asyncio_channel.set_exception_handler(fn)`
+
+Register a callable that is invoked when a background task raises an unhandled exception.
+
+`fn(exc, task)` receives the exception and the `asyncio.Task`.  Pass `None` to suppress reporting entirely.
+
+The default handler logs the exception at `ERROR` level via the `asyncio_channel._util` logger.
+
+Most utility functions in this library spawn background tasks to transfer items between channels.  When a background task that *owns* output channels raises an exception, those channels are closed so that downstream consumers are unblocked rather than hanging forever.  For internal tasks that own no output channels, `set_exception_handler` is the primary observability mechanism.
+
+```python
+import asyncio_channel
+
+errors = []
+
+def my_handler(exc, task):
+    errors.append(exc)
+
+asyncio_channel.set_exception_handler(my_handler)
 ```
 
 [Index &uarr;](#index)
@@ -514,6 +549,8 @@ Returns a two-tuple of new channels.  The channel at index zero will receive ite
 Both channels are created with [create_channel()](#create_channel), which is passed the corresponding `*_n_or_buffer` argument.
 
 Both channels will be closed when `ch` is closed.
+
+If an exception occurs in the background task (including one raised by `predicate`), both output channels are closed and the exception is forwarded to the [exception handler](#set_exception_handler).
 
 ```python
 is_even = lambda n: n % 2 == 0

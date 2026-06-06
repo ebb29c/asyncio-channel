@@ -5,7 +5,7 @@ from itertools import chain
 
 from ._channel import Channel
 from ._mixin import ReprMixin
-from ._util import wait_all, wait_first
+from ._util import _task_done_callback, wait_all, wait_first
 
 
 def _range_from(start, end, at, *, _chain=chain):
@@ -138,7 +138,8 @@ class ChannelMix(ReprMixin):
 
     def __init__(self, out, *,
                  _create_task=create_task, _Event=Event, _mix=_mix,
-                 _drain=_drain):
+                 _drain=_drain,
+                 _task_done_callback=_task_done_callback):
         self._srcs = {}
         self._priority_mode = False
         self._done = False
@@ -146,8 +147,10 @@ class ChannelMix(ReprMixin):
         self._mute = mute = []
         self._restart_mix = restart_mix = _Event()
         self._restart_mute = restart_mute = _Event()
-        _create_task(_mix(out, mix, restart_mix, self._notify))
-        _create_task(_drain(out, mute, restart_mute))
+        t1 = _create_task(_mix(out, mix, restart_mix, self._notify))
+        t1.add_done_callback(_task_done_callback)
+        t2 = _create_task(_drain(out, mute, restart_mute))
+        t2.add_done_callback(_task_done_callback)
 
     @property
     def priority_mode(self):

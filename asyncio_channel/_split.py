@@ -3,21 +3,26 @@ __all__ = ('split',)
 from asyncio import create_task
 
 from ._create_channel import create_channel
+from ._util import _task_done_callback
 
 
 async def _split(predicate, ch, true_out, false_out):
     """Sort items by predicate."""
-    async for x in ch:
-        out = true_out if predicate(x) else false_out
-        await out.put(x)
-
-    true_out.close()
-    false_out.close()
+    try:
+        async for x in ch:
+            out = true_out if predicate(x) else false_out
+            await out.put(x)
+        true_out.close()
+        false_out.close()
+    except Exception:
+        true_out.close()
+        false_out.close()
+        raise
 
 
 def split(predicate, ch, true_n_or_buffer=1, false_n_or_buffer=1, *,
           _create_channel=create_channel, _create_task=create_task,
-          _split=_split):
+          _split=_split, _task_done_callback=_task_done_callback):
     """Sort channel items using predicate.
 
     Returns a tuple of two channels.  The first will contains items
@@ -29,5 +34,6 @@ def split(predicate, ch, true_n_or_buffer=1, false_n_or_buffer=1, *,
     """
     true_out = _create_channel(true_n_or_buffer)
     false_out = _create_channel(false_n_or_buffer)
-    _create_task(_split(predicate, ch, true_out, false_out))
+    task = _create_task(_split(predicate, ch, true_out, false_out))
+    task.add_done_callback(_task_done_callback)
     return true_out, false_out

@@ -5,16 +5,21 @@ from asyncio import create_task
 from ._create_channel import create_channel
 from ._create_multiple import create_multiple
 from ._mixin import ReprMixin
+from ._util import _task_done_callback
 
 
 async def _start(src, get_topic, topics, notify):
     """Takes items and put on topic channel."""
-    async for x in src:
-        topic = get_topic(x)
-        out = topics.get(topic)
+    try:
+        async for x in src:
+            topic = get_topic(x)
+            out = topics.get(topic)
 
-        if out is not None:
-            await out.put(x)
+            if out is not None:
+                await out.put(x)
+    except Exception:
+        notify()
+        raise
 
     notify()
 
@@ -28,11 +33,13 @@ class Publication(ReprMixin):
     """
 
     def __init__(self, src, topic_fn, *, n_or_buffer=1,
-                 _create_task=create_task):
+                 _create_task=create_task,
+                 _task_done_callback=_task_done_callback):
         self._n_or_buffer = n_or_buffer
         self._mults = {}
         self._topics = topics = {}
-        _create_task(_start(src, topic_fn, topics, self._notify))
+        task = _create_task(_start(src, topic_fn, topics, self._notify))
+        task.add_done_callback(_task_done_callback)
 
     def subscribe(self, topic, ch, *, close=True,
                   _create_channel=create_channel,
