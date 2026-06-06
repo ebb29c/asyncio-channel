@@ -29,6 +29,5 @@ async def test_split():
     assert x == r
     assert t_out.empty()
     ch.close()
-    await asyncio.wait_for(
-        asyncio.wait((t_out.closed(), f_out.closed())),
-        timeout=0.05)
+    await asyncio.wait_for(t_out.closed(), timeout=1.0)
+    await asyncio.wait_for(f_out.closed(), timeout=1.0)

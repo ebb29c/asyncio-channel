@@ -30,17 +30,22 @@ async def _mix(out, mix, restart, notify, *,
         # Ensure restart isn't still set.
         restart.clear()
 
-        # Wait for one of the following conditions:
-        await _wait_first(
-            # 1. restart flag is set.
-            restart.wait(),
-            # 2. out channel is closed.
-            out.closed(),
-            # 3. out channel has capacity and at least one mix channel
-            #    has an item.
-            _wait_all(
-                out.capacity(),
-                _wait_first(*(ch.item() for ch in mix))))
+        if not mix:
+            # Nothing to transfer; wait until the channel list changes or
+            # the output is closed.
+            await _wait_first(restart.wait(), out.closed())
+        else:
+            # Wait for one of the following conditions:
+            await _wait_first(
+                # 1. restart flag is set.
+                restart.wait(),
+                # 2. out channel is closed.
+                out.closed(),
+                # 3. out channel has capacity and at least one mix channel
+                #    has an item.
+                _wait_all(
+                    out.capacity(),
+                    _wait_first(*(ch.item() for ch in mix))))
 
         if out.is_closed():
             break  # End transfer task.
@@ -74,14 +79,19 @@ async def _drain(out, mute, restart, *,
         # Ensure restart isn't still set.
         restart.clear()
 
-        # Wait for one of the following conditions:
-        await _wait_first(
-            # 1. restart flag is set.
-            restart.wait(),
-            # 2. out channel is closed.
-            out.closed(),
-            # 3. At least one mute channel has an item.
-            _wait_first(*(ch.item() for ch in mute)))
+        if not mute:
+            # Nothing to drain; wait until the channel list changes or
+            # the output is closed.
+            await _wait_first(restart.wait(), out.closed())
+        else:
+            # Wait for one of the following conditions:
+            await _wait_first(
+                # 1. restart flag is set.
+                restart.wait(),
+                # 2. out channel is closed.
+                out.closed(),
+                # 3. At least one mute channel has an item.
+                _wait_first(*(ch.item() for ch in mute)))
 
         if out.is_closed():
             break  # End drain task.

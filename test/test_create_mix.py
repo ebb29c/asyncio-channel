@@ -328,3 +328,26 @@ async def test_mute_restart():
     assert not ch1.empty()
     out.close()
     await asyncio.sleep(0.05)  # Give mix a chance to clean up.
+
+@pytest.mark.asyncio
+async def test_mix_empty_mute_list_no_crash():
+    """
+    GIVEN
+        A mix in PRIORITY_PAUSE mode with no muted channels.
+    WHEN
+        The mix is running.
+    EXPECT
+        No ValueError from calling wait_first() with zero arguments.
+    """
+    out = create_channel(10)
+    m = create_mix(out)
+    ch = create_channel()
+    m.toggle(ch, {'priority': True})
+    m.priority_mode = m.PRIORITY_PAUSE
+    # With PRIORITY_PAUSE, only priority channels go to mix; mute list is
+    # empty.  Putting an item should reach out without crashing.
+    assert ch.offer('ok')
+    result = await out.take(timeout=1.0)
+    assert result == 'ok'
+    out.close()
+    await asyncio.wait_for(out.closed(), timeout=1.0)

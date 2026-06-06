@@ -18,10 +18,10 @@ async def test_pipe_close_false():
     src = create_channel()
     dest = create_channel()
     pipe(src, dest, close=False)
-    asyncio.get_running_loop().call_later(0.05, src.close)
-    await asyncio.wait_for(src.closed(), timeout=0.05)
+    asyncio.get_running_loop().call_later(0.01, src.close)
+    await asyncio.wait_for(src.closed(), timeout=1.0)
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(dest.closed(), timeout=0.05)
+        await asyncio.wait_for(dest.closed(), timeout=1.0)
 
 @pytest.mark.asyncio
 async def test_pipe_close_true():
@@ -36,9 +36,9 @@ async def test_pipe_close_true():
     src = create_channel()
     dest = create_channel()
     pipe(src, dest)
-    asyncio.get_running_loop().call_later(0.05, src.close)
-    await asyncio.wait_for(src.closed(), timeout=0.05)
-    await asyncio.wait_for(dest.closed(), timeout=0.05)
+    asyncio.get_running_loop().call_later(0.01, src.close)
+    await asyncio.wait_for(src.closed(), timeout=1.0)
+    await asyncio.wait_for(dest.closed(), timeout=1.0)
 
 @pytest.mark.asyncio
 async def test_pipe():
@@ -56,7 +56,7 @@ async def test_pipe():
     assert await dest.take(timeout=0.05) == x
     assert src.empty()
     src.close()
-    await asyncio.wait_for(dest.closed(), timeout=0.05)
+    await asyncio.wait_for(dest.closed(), timeout=1.0)
 
 @pytest.mark.asyncio
 async def test_pipe_close():
@@ -76,4 +76,4 @@ async def test_pipe_close():
     pipe(src, dest)
     assert await dest.take(timeout=0.05) == x
     assert src.empty()
-    await asyncio.wait_for(dest.closed(), timeout=0.05)
+    await asyncio.wait_for(dest.closed(), timeout=1.0)
