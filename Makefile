@@ -5,7 +5,7 @@ PYTEST_COV_ARGS := \
 	--cov-fail-under=$(MIN_COVERAGE) \
 	--no-cov-on-fail
 
-.PHONY: install test test-cov test-cov-html test-cov-xml lint
+.PHONY: install test test-cov test-cov-html test-cov-xml lint lint-fix format typecheck
 
 
 # Install asyncio_channel module and test dependencies.
@@ -30,5 +30,14 @@ test-cov-xml:
 	pytest $(PYTEST_COV_ARGS) --cov-report=xml
 
 lint:
-	python -m flake8 $(MODULE)
+	ruff check $(MODULE)
+
+lint-fix:
+	ruff check --fix $(MODULE)
+
+format:
+	ruff format $(MODULE)
+
+typecheck:
+	mypy $(MODULE)
 

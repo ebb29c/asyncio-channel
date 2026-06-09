@@ -1,5 +1,5 @@
 [build-system]
-requires = ["flit_core >=2,<4"]
+requires = ["flit_core >=3,<5"]
 build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
@@ -16,32 +16,42 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython"
 ]
-requires-python = "~=3.7"
+requires-python = ">=3.11"
 
 [tool.flit.metadata.urls]
 Documentation = "https://github.com/ebb29c/asyncio-channel/blob/main/docs/api.md"
 
 [tool.flit.metadata.requires-extra]
 test = [
-    "pytest ~=5.4",
-    "pytest-asyncio ~=0.11",
-    "pytest-cov ~=2.8",
-    "flake8 ~=3.7"
+    "pytest ~=8.0",
+    "pytest-asyncio ~=0.24",
+    "pytest-cov ~=5.0",
+    "ruff",
+    "mypy"
 ]
 
 [tool.flit.sdist]
 exclude = [
     ".coveragerc",
     ".gitignore",
-    ".travis.yml",
+    ".github/",
     "Makefile",
     "README.md",
     "docs/",
     "examples/",
     "test/"
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
