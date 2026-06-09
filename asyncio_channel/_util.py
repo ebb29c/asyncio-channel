@@ -1,21 +1,28 @@
+from __future__ import annotations
+
 __all__ = ('wait_all', 'wait_first', 'set_exception_handler')
 
 import logging
 from asyncio import FIRST_COMPLETED, CancelledError, Task, create_task, wait
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 _logger = logging.getLogger(__name__)
 
 
-def _default_exception_handler(exc, task):
+def _default_exception_handler(exc: BaseException, task: Task[Any]) -> None:
     _logger.error(
         'Unhandled exception in background task %r', task, exc_info=exc,
     )
 
 
-_exception_handler = _default_exception_handler
+_exception_handler: Callable[[BaseException, Task[Any]], None] | None = (
+    _default_exception_handler
+)
 
 
-def set_exception_handler(fn):
+def set_exception_handler(
+        fn: Callable[[BaseException, Task[Any]], None] | None) -> None:
     """Register a callable invoked when a background task raises an exception.
 
     fn(exc, task) receives the exception and the asyncio.Task.  Pass None to
@@ -26,7 +33,7 @@ def set_exception_handler(fn):
     _exception_handler = fn
 
 
-def _task_done_callback(task):
+def _task_done_callback(task: Task[Any]) -> None:
     """Attached as a done-callback to background tasks that have no output
     channel to close on failure.  Forwards exceptions to the registered
     exception handler."""
@@ -37,12 +44,10 @@ def _task_done_callback(task):
 
 
 async def wait_all(
-        *coros_or_tasks,
-        timeout=None,
-        create_task=create_task,
-        wait=wait,
-        CancelledError=CancelledError,
-        Task=Task):
+        *coros_or_tasks: Coroutine[Any, Any, Any] | Task[Any],
+        timeout: float | None = None,
+        create_task: Callable[..., Task[Any]] = create_task,
+) -> tuple[set[Task[Any]], set[Task[Any]]]:
     """Wait for all tasks to complete.
 
     Returns two tuples: completed tasks, pending tasks.  If timeout is
@@ -68,11 +73,10 @@ async def wait_all(
 
 
 async def wait_first(
-        *coros_or_tasks,
-        timeout=None,
-        wait=wait,
-        return_when=FIRST_COMPLETED,
-        CancelledError=CancelledError):
+        *coros_or_tasks: Coroutine[Any, Any, Any] | Task[Any],
+        timeout: float | None = None,
+        create_task: Callable[..., Task[Any]] = create_task,
+) -> tuple[set[Task[Any]], set[Task[Any]]]:
     """Wait for first task to complete.
 
     Returns two tuples: completed tasks, pending tasks.  If timeout is
@@ -86,7 +90,7 @@ async def wait_first(
         done, pending = await wait(
             tasks,
             timeout=timeout,
-            return_when=return_when)
+            return_when=FIRST_COMPLETED)
     except CancelledError:
         for task in tasks:
             if not task.done():

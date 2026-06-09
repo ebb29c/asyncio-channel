@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = (
     'create_blocking_buffer',
     'create_dropping_buffer',
@@ -10,7 +12,7 @@ from ._dropping_queue import DroppingQueue
 from ._sliding_queue import SlidingQueue
 
 
-def create_blocking_buffer(n):
+def create_blocking_buffer(n: int) -> Queue[object]:
     """Get a buffer of size n.
 
     If buffer is full then attempts to add an item will block.
@@ -22,7 +24,7 @@ def create_blocking_buffer(n):
     return Queue(n)
 
 
-def create_dropping_buffer(n):
+def create_dropping_buffer(n: int) -> DroppingQueue:
     """Get a buffer of size n.
 
     If buffer is full then adding an item will not block, but the item
@@ -31,7 +33,7 @@ def create_dropping_buffer(n):
     return DroppingQueue(create_blocking_buffer(n))
 
 
-def create_sliding_buffer(n):
+def create_sliding_buffer(n: int) -> SlidingQueue:
     """Get a buffer of size n.
 
     If buffer is full then adding an item will not block, but the oldest

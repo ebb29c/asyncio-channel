@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 __all__ = ('Channel',)
 
-from asyncio import Event
+from asyncio import Event, Task
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ._mixin import ReprMixin
+from ._types import BufferProtocol
 from ._util import wait_first
+
+_WaitFn = Callable[..., Awaitable[tuple[set[Task[Any]], set[Task[Any]]]]]
 
 
 class Channel(ReprMixin):
@@ -13,7 +20,15 @@ class Channel(ReprMixin):
     the ability to "close" a channel, thus preventing adding more items.
     """
 
-    def __init__(self, queue, *, _Event=Event):
+    # These attributes are assigned in __init__ from the queue and Event
+    # objects; declared here so type checkers see them on the class.
+    empty: Callable[[], bool]
+    full: Callable[[], bool]
+    closed: Callable[[], Any]
+    close: Callable[[], None]
+    is_closed: Callable[[], bool]
+
+    def __init__(self, queue: BufferProtocol, *, _Event: type[Event] = Event) -> None:
         self.empty = queue.empty
         self.full = queue.full
         self._get = queue.get
@@ -33,7 +48,8 @@ class Channel(ReprMixin):
 
         self._update_state()
 
-    async def capacity(self, *, timeout=None, _wait_first=wait_first):
+    async def capacity(self, *, timeout: float | None = None,
+                       _wait_first: _WaitFn = wait_first) -> bool:
         """Block until the channel has capacity or is closed.
 
         If timeout is an int or float then unblock after that time has
@@ -59,7 +75,8 @@ class Channel(ReprMixin):
 
         return not (full() or is_closed())
 
-    async def item(self, *, timeout=None, _wait_first=wait_first):
+    async def item(self, *, timeout: float | None = None,
+                   _wait_first: _WaitFn = wait_first) -> bool:
         """Block until the channel has an item or is closed.
 
         If timeout is an int or float then unblock after that time has
@@ -84,7 +101,7 @@ class Channel(ReprMixin):
 
         return not empty()
 
-    def offer(self, x):
+    def offer(self, x: Any) -> bool:
         """Synchronously add x to the channel.
 
         Return True if x was added to the channel, False otherwise.
@@ -101,7 +118,7 @@ class Channel(ReprMixin):
         self._update_state()
         return True
 
-    def poll(self, *, default=None):
+    def poll(self, *, default: Any = None) -> Any:
         """Synchronously get an item from the channel.
 
         Return an item, if available, or default.
@@ -113,7 +130,7 @@ class Channel(ReprMixin):
         self._update_state()
         return x
 
-    async def put(self, x, *, timeout=None):
+    async def put(self, x: Any, *, timeout: float | None = None) -> bool:
         """Asynchronously add x to the channel.
 
         Return True if x was added to the channel, False otherwise.
@@ -124,7 +141,8 @@ class Channel(ReprMixin):
                 or (await self.capacity(timeout=timeout)
                     and self.offer(x)))
 
-    async def take(self, *, timeout=None, default=None):
+    async def take(self, *, timeout: float | None = None,
+                   default: Any = None) -> Any:
         """Asynchronously get an item from the channel.
 
         Return an item, if available, otherwise block until an item becomes
@@ -135,7 +153,7 @@ class Channel(ReprMixin):
             x = self.poll(default=default)
         return x
 
-    def _update_state(self):
+    def _update_state(self) -> None:
         """Update waitable state flags."""
         if self.full():
             self._capacity.clear()
@@ -147,11 +165,11 @@ class Channel(ReprMixin):
         else:
             self._item.set()
 
-    def __aiter__(self):
+    def __aiter__(self) -> Channel:
         """Return an asynchronous iterator."""
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> Any:
         """Return the next item from the channel."""
         x = self.poll()
         if x is None:
@@ -162,7 +180,7 @@ class Channel(ReprMixin):
 
         return x
 
-    def _format(self):
+    def _format(self) -> str:
         return ' '.join((
             'closed' if self.is_closed() else 'open',
             f'items={self._size()}',
