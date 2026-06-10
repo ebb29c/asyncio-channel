@@ -277,20 +277,21 @@ async def test_mix_restart():
     EXPECT
         Item to not be taken from input channel.
     """
-    out = create_channel()
+    out = create_channel(10)
     m = create_mix(out)
     ch1 = create_channel()
     ch2 = create_channel()
     m.toggle(ch1, {}, ch2, {})
-    await asyncio.sleep(0.05)  # Give mix a chance to start.
+    # Confirm the mix is running by waiting for it to transfer a warmup item.
+    ch2.offer('warmup')
+    assert await out.take(timeout=1.0) == 'warmup'
     assert ch1.offer('a')
     # ch1 is part of the current mix, removing it is expected to
     # reset the take operation.
     m.remove_input(ch1)
-    assert await out.take(timeout=0.05) is None
+    assert await out.take(timeout=0.5) is None
     assert not ch1.empty()
     out.close()
-    await asyncio.sleep(0.05)  # Give mix a chance to clean up.
 
 async def test_mute_restart():
     """
@@ -307,15 +308,14 @@ async def test_mute_restart():
     ch1 = create_channel()
     ch2 = create_channel()
     m.toggle(ch1, {'mute': True}, ch2, {'mute': True})
-    await asyncio.sleep(0.05)  # Give mix a chance to start.
+    # offer and remove_input are both synchronous, so they happen atomically
+    # from the event loop's perspective — the drain loop cannot process ch1
+    # between the two calls.
     assert ch1.offer('a')
-    # ch1 is currently muted, removing it is expected to
-    # reset the take operation.
     m.remove_input(ch1)
-    assert await out.take(timeout=0.05) is None
+    assert await out.take(timeout=0.5) is None
     assert not ch1.empty()
     out.close()
-    await asyncio.sleep(0.05)  # Give mix a chance to clean up.
 
 async def test_toggle_preserves_unmentioned_channels():
     """

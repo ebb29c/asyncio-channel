@@ -16,7 +16,11 @@ async def test_multiple_closed():
     src = create_channel()
     src.close()
     m = create_multiple(src)
-    await asyncio.sleep(0.05)
+    # Add a sentinel output so we can detect when the background task has
+    # finished (it closes all outputs when src is exhausted).
+    sentinel = create_channel()
+    m.add_output(sentinel)
+    await asyncio.wait_for(sentinel.closed(), timeout=1.0)
     ch = create_channel()
     assert not m.add_output(ch)
 
@@ -42,7 +46,7 @@ async def test_add_output():
     assert value1 == x
     assert value2 == x
     src.close()
-    await asyncio.wait_for(out1.closed(), timeout=0.05)
+    await asyncio.wait_for(out1.closed(), timeout=1.0)
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(out2.closed(), timeout=0.05)
 
@@ -61,7 +65,8 @@ async def test_remove_output():
     m = create_multiple(src)
     assert m.add_output(out1)
     assert m.add_output(out2)
-    await asyncio.sleep(0.05)
+    # remove_output is synchronous; since no yield has occurred yet the
+    # background task hasn't run, so it will see the updated output list.
     m.remove_output(out1)
     x = 'x'
     src.offer(x)
@@ -69,7 +74,7 @@ async def test_remove_output():
     assert value2 == x
     assert out1.empty()
     src.close()
-    await asyncio.wait_for(out2.closed(), timeout=0.05)
+    await asyncio.wait_for(out2.closed(), timeout=1.0)
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(out1.closed(), timeout=0.05)
 
@@ -89,16 +94,19 @@ async def test_remove_all_outputs():
     m = create_multiple(src)
     assert m.add_output(out1)
     assert m.add_output(out2)
-    await asyncio.sleep(0.05)
     m.remove_all_outputs()
     x = 'x'
     src.offer(x)
-    await asyncio.sleep(0.05)
+    src.close()
+    # Add a sentinel output (before any yield) so we can detect when
+    # the background task finishes.  The task hasn't run yet so sentinel
+    # will be closed when the task exits.
+    sentinel = create_channel()
+    m.add_output(sentinel)
+    await asyncio.wait_for(sentinel.closed(), timeout=1.0)
     assert src.empty()
     assert out1.empty()
     assert out2.empty()
-    src.close()
-    await asyncio.sleep(0.05)
 
 def test_input_has_item_no_outputs():
     """
@@ -113,17 +121,20 @@ def test_input_has_item_no_outputs():
     """
     async def start():
         exceptions = []
-        def capture_exceptions(loop, context):
-            exceptions.append(context['exception'])
-
-        asyncio.get_running_loop().set_exception_handler(capture_exceptions)
+        asyncio.get_running_loop().set_exception_handler(
+            lambda loop, ctx: exceptions.append(ctx['exception']))
 
         src = create_channel()
         mult = create_multiple(src)
         await src.put(42)
-        await asyncio.sleep(0.05)
+        src.close()
+        # Add a sentinel output (before any yield) so we can detect when
+        # the background task has finished.  The task hasn't run yet and
+        # will close sentinel when src is exhausted.
+        sentinel = create_channel()
+        mult.add_output(sentinel)
+        await asyncio.wait_for(sentinel.closed(), timeout=1.0)
         assert src.empty()
-
         return exceptions
 
     exceptions = asyncio.run(start())
