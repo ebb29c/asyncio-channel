@@ -4,7 +4,6 @@ import asyncio
 import pytest
 
 
-@pytest.mark.asyncio
 async def test_alts_ready_take():
     """
     WHEN
@@ -19,7 +18,6 @@ async def test_alts_ready_take():
     out = await asyncio.wait_for(complete_one(ch1, ch2), timeout=0.05)
     assert out == (x, ch2)
 
-@pytest.mark.asyncio
 async def tests_alts_ready_put():
     """
     WHEN
@@ -37,7 +35,6 @@ async def tests_alts_ready_put():
     assert ch1.poll() == a
     assert ch2.poll() == c
 
-@pytest.mark.asyncio
 async def test_alts_default():
     """
     WHEN
@@ -51,7 +48,6 @@ async def test_alts_default():
     out = await asyncio.wait_for(complete_one(ch1, ch2, default=x), timeout=0.05)
     assert out == (x, 'default')
 
-@pytest.mark.asyncio
 async def test_alts_wait_take():
     """
     WHEN
@@ -66,7 +62,6 @@ async def test_alts_wait_take():
     out = await asyncio.wait_for(complete_one(ch1, ch2), timeout=0.1)
     assert out == (x, ch2)
 
-@pytest.mark.asyncio
 async def test_alts_wait_put():
     """
     WHEN
@@ -86,7 +81,6 @@ async def test_alts_wait_put():
     assert out == (True, ch2)
     assert ch2.poll() == d
 
-@pytest.mark.asyncio
 async def test_alts_multiple_ready_priority():
     """
     WHEN
@@ -107,7 +101,6 @@ async def test_alts_multiple_ready_priority():
     assert ch1.empty()
     assert not ch2.empty()
 
-@pytest.mark.asyncio
 async def test_alts_multiple_ready_first_fails():
     """
     WHEN
@@ -135,7 +128,6 @@ async def test_alts_multiple_ready_first_fails():
     assert ch1.empty()
     assert ch2.poll() == d
 
-@pytest.mark.asyncio
 async def test_alts_multiple_ready_first_batch_fails():
     """
     WHEN

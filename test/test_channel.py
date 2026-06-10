@@ -29,7 +29,6 @@ def test_close():
     ch.close()
     assert ch.is_closed()
 
-@pytest.mark.asyncio
 async def test_closed():
     """
     GIVEN
@@ -44,7 +43,6 @@ async def test_closed():
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(ch.closed(), timeout=0.05)
 
-@pytest.mark.asyncio
 async def test_closed_unblock():
     """
     GIVEN
@@ -182,7 +180,6 @@ def test_poll_empty_given_value():
     x = 'x'
     assert ch.poll(default=x) == x
 
-@pytest.mark.asyncio
 async def test_put():
     """
     GIVEN
@@ -198,7 +195,6 @@ async def test_put():
     assert await asyncio.wait_for(ch.put(x), timeout=0.05)
     assert q.get_nowait() == x
 
-@pytest.mark.asyncio
 async def test_put_closed():
     """
     GIVEN
@@ -216,7 +212,6 @@ async def test_put_closed():
     assert result == False
     assert q.empty()
 
-@pytest.mark.asyncio
 async def test_put_full():
     """
     GIVEN
@@ -235,7 +230,6 @@ async def test_put_full():
         await asyncio.wait_for(ch.put(b), timeout=0.05)
     assert q.get_nowait() == a
 
-@pytest.mark.asyncio
 async def test_put_full_unblock():
     """
     GIVEN
@@ -254,7 +248,6 @@ async def test_put_full_unblock():
     assert await asyncio.wait_for(ch.put(b), timeout=0.1)
     assert q.get_nowait() == b
 
-@pytest.mark.asyncio
 async def test_put_full_timeout():
     """
     GIVEN
@@ -272,7 +265,6 @@ async def test_put_full_timeout():
     assert not await ch.put(b, timeout=0.05)
     assert q.get_nowait() == a
 
-@pytest.mark.asyncio
 async def test_put_full_close():
     """
     GIVEN
@@ -291,7 +283,6 @@ async def test_put_full_close():
     assert not await asyncio.wait_for(ch.put(b), timeout=0.1)
     assert q.get_nowait() == a
 
-@pytest.mark.asyncio
 async def test_take():
     """
     GIVEN
@@ -310,7 +301,6 @@ async def test_take():
     result = await asyncio.wait_for(ch.take(), timeout=0.05)
     assert result == a
 
-@pytest.mark.asyncio
 async def test_take_closed():
     """
     GIVEN
@@ -326,7 +316,6 @@ async def test_take_closed():
     result = await asyncio.wait_for(ch.take(), timeout=0.05)
     assert result is None
 
-@pytest.mark.asyncio
 async def test_take_closed_default():
     """
     GIVEN
@@ -343,7 +332,6 @@ async def test_take_closed_default():
     result = await asyncio.wait_for(ch.take(default=x), timeout=0.05)
     assert result == x
 
-@pytest.mark.asyncio
 async def test_take_empty():
     """
     GIVEN
@@ -358,7 +346,6 @@ async def test_take_empty():
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(ch.take(), timeout=0.05)
 
-@pytest.mark.asyncio
 async def test_take_unblock():
     """
     GIVEN
@@ -375,7 +362,6 @@ async def test_take_unblock():
     result = await asyncio.wait_for(ch.take(), timeout=0.1)
     assert result == x
 
-@pytest.mark.asyncio
 async def test_take_empty_close_default():
     """
     GIVEN
@@ -393,7 +379,6 @@ async def test_take_empty_close_default():
     result = await asyncio.wait_for(ch.take(default=x), timeout=0.1)
     assert result == x
 
-@pytest.mark.asyncio
 async def test_take_empty_timeout():
     """
     GIVEN
@@ -407,7 +392,6 @@ async def test_take_empty_timeout():
     ch = Channel(q)
     assert await ch.take(timeout=0.05) is None
 
-@pytest.mark.asyncio
 async def test_take_empty_timeout_default():
     """
     GIVEN
@@ -422,7 +406,6 @@ async def test_take_empty_timeout_default():
     x = 'x'
     assert await ch.take(timeout=0.05, default=x) == x
 
-@pytest.mark.asyncio
 async def test_capacity():
     """
     GIVEN
@@ -439,7 +422,6 @@ async def test_capacity():
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(ch.capacity(), timeout=0.05)
 
-@pytest.mark.asyncio
 async def test_capacity_unblock():
     """
     GIVEN
@@ -457,7 +439,6 @@ async def test_capacity_unblock():
     assert await ch.capacity(timeout=0.1)
     assert ch.offer(x)
 
-@pytest.mark.asyncio
 async def test_capacity_timeout_unblock():
     """
     GIVEN
@@ -473,7 +454,6 @@ async def test_capacity_timeout_unblock():
     assert not await ch.capacity(timeout=0.1)
     assert ch.full()
 
-@pytest.mark.asyncio
 async def test_capacity_close_unblock():
     """
     GIVEN
@@ -489,7 +469,6 @@ async def test_capacity_close_unblock():
     assert not await ch.capacity(timeout=0.05)
     assert not ch.offer('x')
 
-@pytest.mark.asyncio
 async def test_capacity_unblock_next():
     """
     GIVEN
@@ -509,7 +488,6 @@ async def test_capacity_unblock_next():
         asyncio.gather(ch.capacity(), ch.capacity()),
         timeout=0.1)
 
-@pytest.mark.asyncio
 async def test_capacity_next_reblocks():
     """
     GIVEN
@@ -536,7 +514,6 @@ async def test_capacity_next_reblocks():
     # Verify that new item was put and unblock the second coroutine.
     assert await ch.take() == b
 
-@pytest.mark.asyncio
 async def test_item():
     """
     GIVEN
@@ -551,7 +528,6 @@ async def test_item():
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(ch.item(), timeout=0.05)
 
-@pytest.mark.asyncio
 async def test_item_unblock():
     """
     GIVEN
@@ -568,7 +544,6 @@ async def test_item_unblock():
     assert await ch.item(timeout=0.1)
     assert ch.poll() == x
 
-@pytest.mark.asyncio
 async def test_item_timeout_unblock():
     """
     GIVEN
@@ -583,7 +558,6 @@ async def test_item_timeout_unblock():
     assert not await ch.item(timeout=0.05)
     assert ch.empty()
 
-@pytest.mark.asyncio
 async def test_item_close_unblock():
     """
     GIVEN
@@ -599,7 +573,6 @@ async def test_item_close_unblock():
     assert not await ch.item(timeout=0.1)
     assert ch.empty()
 
-@pytest.mark.asyncio
 async def test_item_unblock_next():
     """
     GIVEN
@@ -618,7 +591,6 @@ async def test_item_unblock_next():
         asyncio.gather(ch.item(), ch.item()),
         timeout=0.1)
 
-@pytest.mark.asyncio
 async def test_item_next_reblocks():
     """
     GIVEN
@@ -643,7 +615,6 @@ async def test_item_next_reblocks():
     assert ch.empty()
     await ch.put('b')  # Unblock the second coroutine.
 
-@pytest.mark.asyncio
 async def test_aiter():
     """
     GIVEN

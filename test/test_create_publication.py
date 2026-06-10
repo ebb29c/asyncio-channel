@@ -5,7 +5,6 @@ import operator
 import pytest
 
 
-@pytest.mark.asyncio
 async def test_publication():
     """
     GIVEN
@@ -34,7 +33,6 @@ async def test_publication():
     assert a_ch.is_closed()
     assert not b_ch.is_closed()
 
-@pytest.mark.asyncio
 async def test_publication_unsubscribe():
     """
     GIVEN
@@ -64,7 +62,6 @@ async def test_publication_unsubscribe():
     src.close()
     await asyncio.sleep(0.05)
 
-@pytest.mark.asyncio
 async def test_publication_unsubscribe_all():
     """
     GIVEN
@@ -91,7 +88,6 @@ async def test_publication_unsubscribe_all():
     src.close()
     await asyncio.sleep(0.05)
 
-@pytest.mark.asyncio
 async def test_publication_unsubscribe_all_on_topic():
     """
     GIVEN

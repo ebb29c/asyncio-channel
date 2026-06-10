@@ -1,10 +1,8 @@
 from asyncio_channel import create_channel, merge
 
 import asyncio
-import pytest
 
 
-@pytest.mark.asyncio
 async def test_merge():
     """
     GIVEN

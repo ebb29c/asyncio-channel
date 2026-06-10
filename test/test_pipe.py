@@ -5,7 +5,6 @@ import asyncio
 import pytest
 
 
-@pytest.mark.asyncio
 async def test_pipe_close_false():
     """
     GIVEN
@@ -23,7 +22,6 @@ async def test_pipe_close_false():
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(dest.closed(), timeout=1.0)
 
-@pytest.mark.asyncio
 async def test_pipe_close_true():
     """
     GIVEN
@@ -40,7 +38,6 @@ async def test_pipe_close_true():
     await asyncio.wait_for(src.closed(), timeout=1.0)
     await asyncio.wait_for(dest.closed(), timeout=1.0)
 
-@pytest.mark.asyncio
 async def test_pipe():
     """
     WHEN
@@ -58,7 +55,6 @@ async def test_pipe():
     src.close()
     await asyncio.wait_for(dest.closed(), timeout=1.0)
 
-@pytest.mark.asyncio
 async def test_pipe_close():
     """
     GIVEN

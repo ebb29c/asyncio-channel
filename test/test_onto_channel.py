@@ -4,7 +4,6 @@ import asyncio
 import pytest
 
 
-@pytest.mark.asyncio
 async def test_onto_channel():
     """
     WHEN
@@ -22,7 +21,6 @@ async def test_onto_channel():
     assert tuple(taken) == coll
     assert ch.is_closed()
 
-@pytest.mark.asyncio
 async def test_onto_channel_close_false():
     """
     WHEN
@@ -41,7 +39,6 @@ async def test_onto_channel_close_false():
     ch.close()
     await asyncio.sleep(0.05)
 
-@pytest.mark.asyncio
 async def test_onto_channel_dest_closed():
     """
     WHEN
@@ -56,7 +53,6 @@ async def test_onto_channel_dest_closed():
     await asyncio.wait_for(out.closed(), timeout=0.05)
     assert ch.empty()
 
-@pytest.mark.asyncio
 async def test_to_channel():
     """
     WHEN

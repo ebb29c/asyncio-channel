@@ -2,10 +2,8 @@ from asyncio_channel import create_channel, map
 
 import asyncio
 import operator
-import pytest
 
 
-@pytest.mark.asyncio
 async def test_map():
     """
     GIVEN
