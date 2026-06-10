@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 __all__ = ('reduce',)
 
-from asyncio import create_task
+from asyncio import Task, create_task
+from collections.abc import Callable
+from typing import Any
 
+from ._channel import Channel
 from ._create_channel import create_channel
+from ._types import ReadableChannel
 from ._util import _task_done_callback
 
 
-async def _reduce(out, fn, ch, init):
+async def _reduce(out: Channel, fn: Callable[[Any, Any], Any],
+                  ch: ReadableChannel, init: Any) -> None:
     """Reduce items from channel."""
     try:
         acc = init
@@ -19,9 +26,12 @@ async def _reduce(out, fn, ch, init):
         raise
 
 
-def reduce(fn, ch, init=None, *,
-           _create_channel=create_channel, _create_task=create_task,
-           _task_done_callback=_task_done_callback):
+def reduce(fn: Callable[[Any, Any], Any], ch: ReadableChannel,
+           init: Any = None, *,
+           _create_channel: Callable[[], Channel] = create_channel,
+           _create_task: Callable[..., Task[Any]] = create_task,
+           _task_done_callback: Callable[[Task[Any]], None] = _task_done_callback,
+           ) -> Channel:
     """Reduce items taken from channel.
 
     Returns a new channel which will receive the result, or init if

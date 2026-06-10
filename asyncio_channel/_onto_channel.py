@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 __all__ = ('onto_channel', 'to_channel')
 
-from asyncio import create_task
+from asyncio import Task, create_task
+from collections.abc import Callable, Coroutine, Iterable
+from typing import Any
 
+from ._channel import Channel
 from ._create_channel import create_channel
+from ._types import WritableChannel
 from ._util import _task_done_callback
 
 
-async def _onto_channel(coll, dest, done, close):
+async def _onto_channel(coll: Iterable[Any], dest: WritableChannel,
+                        done: Channel, close: bool) -> None:
     """Copy items from src to dest channel."""
     try:
         for x in coll:
@@ -23,10 +30,16 @@ async def _onto_channel(coll, dest, done, close):
         done.close()  # Signal that all items have been copied (or failed).
 
 
-def onto_channel(collection, ch, *, close=True,
-                 _create_channel=create_channel, _create_task=create_task,
-                 _onto_channel=_onto_channel,
-                 _task_done_callback=_task_done_callback):
+_OntoChanFn = Callable[..., Coroutine[Any, Any, None]]
+
+
+def onto_channel(collection: Iterable[Any], ch: WritableChannel, *,
+                 close: bool = True,
+                 _create_channel: Callable[[], Channel] = create_channel,
+                 _create_task: Callable[..., Task[Any]] = create_task,
+                 _onto_channel: _OntoChanFn = _onto_channel,
+                 _task_done_callback: Callable[[Task[Any]], None] = _task_done_callback,
+                 ) -> Channel:
     """Copy items from collection to channel.
 
     If "close" is True then channel will be closed when done.
@@ -40,8 +53,10 @@ def onto_channel(collection, ch, *, close=True,
     return done
 
 
-def to_channel(collection, *,
-               _create_channel=create_channel, _onto_channel=onto_channel):
+def to_channel(collection: Iterable[Any], *,
+               _create_channel: Callable[[], Channel] = create_channel,
+               _onto_channel: Callable[..., Channel] = onto_channel,
+               ) -> Channel:
     """Copy items from collection to a new channel.
 
     Returns a new channel that will be closed after all items have been

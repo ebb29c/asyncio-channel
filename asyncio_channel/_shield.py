@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 __all__ = ('ProhibitedOperationError', 'shield_from_close',
            'shield_from_read', 'shield_from_write')
+
+from typing import Any
 
 from ._channel import Channel
 from ._mixin import ReprMixin
@@ -9,7 +13,7 @@ class ProhibitedOperationError(Exception):
     pass
 
 
-def _delegate_methods(receiver, target):
+def _delegate_methods(receiver: object, target: object) -> None:
     """Delegate target's public methods to receiver."""
     receiver_methods = frozenset(dir(receiver))
     target_methods = frozenset(dir(target))
@@ -23,14 +27,15 @@ def _delegate_methods(receiver, target):
 
 class ChannelDecoratorBase(ReprMixin):
 
-    def __init__(self, channel, *, silent=False):
+    def __init__(self, channel: Channel | ChannelDecoratorBase, *,
+                 silent: bool = False) -> None:
         if not isinstance(channel, (Channel, ChannelDecoratorBase)):
             raise TypeError(
                 f'must be a channel, not a {type(channel).__name__}')
         self._channel = channel
         self._silent = silent
 
-    def _format(self):
+    def _format(self) -> str:
         return f'channel={self._channel!r}'
 
 
@@ -41,12 +46,13 @@ class CloseShield(ChannelDecoratorBase):
     ProhibitedOperationError.
     """
 
-    def __init__(self, channel, *, silent=False,
-                 _delegate_methods=_delegate_methods):
+    def __init__(self, channel: Channel | ChannelDecoratorBase, *,
+                 silent: bool = False,
+                 _delegate_methods: Any = _delegate_methods) -> None:
         super().__init__(channel, silent=silent)
         _delegate_methods(receiver=self, target=channel)
 
-    def close(self):
+    def close(self) -> None:
         if not self._silent:
             raise ProhibitedOperationError('close')
 
@@ -61,22 +67,24 @@ class ReadShield(ChannelDecoratorBase):
     .take() will raise a ProhibitedOperationError.
     """
 
-    def __init__(self, channel, *, silent=False,
-                 _delegate_methods=_delegate_methods):
+    def __init__(self, channel: Channel | ChannelDecoratorBase, *,
+                 silent: bool = False,
+                 _delegate_methods: Any = _delegate_methods) -> None:
         super().__init__(channel, silent=silent)
         _delegate_methods(receiver=self, target=channel)
 
-    async def item(self, *, timeout=None):
+    async def item(self, *, timeout: float | None = None) -> bool:
         if not self._silent:
             raise ProhibitedOperationError('item')
         return False
 
-    def poll(self, *, default=None):
+    def poll(self, *, default: Any = None) -> Any:
         if not self._silent:
             raise ProhibitedOperationError('poll')
         return default
 
-    async def take(self, *, default=None, timeout=None):
+    async def take(self, *, default: Any = None,
+                   timeout: float | None = None) -> Any:
         if not self._silent:
             raise ProhibitedOperationError('take')
         return default
@@ -92,22 +100,24 @@ class WriteShield(ChannelDecoratorBase):
     .put() will raise a ProhibitedOperationError.
     """
 
-    def __init__(self, channel, *, silent=False,
-                 _delegate_methods=_delegate_methods):
+    def __init__(self, channel: Channel | ChannelDecoratorBase, *,
+                 silent: bool = False,
+                 _delegate_methods: Any = _delegate_methods) -> None:
         super().__init__(channel, silent=silent)
         _delegate_methods(receiver=self, target=channel)
 
-    async def capacity(self, *, timeout=None):
+    async def capacity(self, *, timeout: float | None = None) -> bool:
         if not self._silent:
             raise ProhibitedOperationError('capacity')
         return False
 
-    def offer(self, x, *, default=None):
+    def offer(self, x: Any, *, default: Any = None) -> bool:
         if not self._silent:
             raise ProhibitedOperationError('offer')
         return False
 
-    async def put(self, x, default=None, timeout=None):
+    async def put(self, x: Any, default: Any = None,
+                  timeout: float | None = None) -> bool:
         if not self._silent:
             raise ProhibitedOperationError('put')
         return False

@@ -2,15 +2,13 @@ from __future__ import annotations
 
 __all__ = ('Channel',)
 
-from asyncio import Event, Task
-from collections.abc import Awaitable, Callable
+from asyncio import Event
+from collections.abc import Callable
 from typing import Any
 
 from ._mixin import ReprMixin
-from ._types import BufferProtocol
+from ._types import BufferProtocol, _WaitFn
 from ._util import wait_first
-
-_WaitFn = Callable[..., Awaitable[tuple[set[Task[Any]], set[Task[Any]]]]]
 
 
 class Channel(ReprMixin):

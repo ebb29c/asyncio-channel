@@ -1,12 +1,25 @@
+from __future__ import annotations
+
 __all__ = ('complete_one',)
 
-from asyncio import create_task
+from asyncio import Task, create_task
+from collections.abc import Callable
+from typing import Any
 
 from ._channel import Channel
+from ._types import AnyChannel, ReadableChannel, WritableChannel, _WaitFn
 from ._util import wait_first
 
+# A ch_op is either a channel to read from, or a (channel, value) pair to
+# write to.
+_ChOp = ReadableChannel | tuple[WritableChannel, Any]
+_ExecFn = Callable[..., tuple[Any, AnyChannel] | None]
 
-def _exec_first_ready(ch_ops, channel=Channel):
+
+def _exec_first_ready(
+        ch_ops: tuple[_ChOp, ...] | list[_ChOp],
+        channel: type[Channel] = Channel,
+) -> tuple[Any, AnyChannel] | None:
     """Execute the first ch_op which is ready."""
     for ch_op in ch_ops:
         if isinstance(ch_op, channel):
@@ -19,12 +32,14 @@ def _exec_first_ready(ch_ops, channel=Channel):
             status = ch.offer(x)
             if status:
                 return True, ch
+    return None
 
 
 def _get_tasks_waiting_for_ready(
-        ch_ops,
-        channel=Channel,
-        create_task=create_task):
+        ch_ops: list[_ChOp],
+        channel: type[Channel] = Channel,
+        create_task: Callable[..., Task[Any]] = create_task,
+) -> list[Task[Any]]:
     """Get tasks which wait for each ch_op to be ready."""
     tasks = []
     for ch_op in ch_ops:
@@ -37,16 +52,17 @@ def _get_tasks_waiting_for_ready(
 
 
 def _exec_first_ready_in_order(
-        ready_tasks,
-        ordered_tasks,
-        ch_ops,
-        _exec_first_ready=_exec_first_ready):
+        ready_tasks: set[Task[Any]],
+        ordered_tasks: list[Task[Any]],
+        ch_ops: list[_ChOp],
+        _exec_first_ready: _ExecFn = _exec_first_ready,
+) -> tuple[tuple[Any, AnyChannel] | None, list[_ChOp] | None]:
     """Execute the first ready task from ordered_task.
 
     Returns a tuple of (execution_output, retry_ch_opts), one element will be
     None.
     """
-    next_ch_opts = []
+    next_ch_opts: list[_ChOp] = []
     for i, task in enumerate(ordered_tasks):
         if task in ready_tasks:
             ready = ch_ops[i]
@@ -59,16 +75,17 @@ def _exec_first_ready_in_order(
 
 
 def _exec_first_available_ready(
-        ready_tasks,
-        all_tasks,
-        ch_ops,
-        _exec_first_ready=_exec_first_ready):
+        ready_tasks: set[Task[Any]],
+        all_tasks: list[Task[Any]],
+        ch_ops: list[_ChOp],
+        _exec_first_ready: _ExecFn = _exec_first_ready,
+) -> tuple[tuple[Any, AnyChannel] | None, list[_ChOp] | None]:
     """Execute the first ready task.
 
     Returns a tuple of (execution_output, retry_ch_opts), one element will be
     None.
     """
-    duds = []
+    duds: list[_ChOp] = []
     for task in ready_tasks:
         index = all_tasks.index(task)
         ready = ch_ops[index]
@@ -80,13 +97,14 @@ def _exec_first_available_ready(
 
 
 async def complete_one(
-        *ch_ops, priority=False,
-        _exec_first_ready=_exec_first_ready,
-        _exec_first_ready_in_order=_exec_first_ready_in_order,
-        _exec_first_available_ready=_exec_first_available_ready,
-        _get_tasks_waiting_for_ready=_get_tasks_waiting_for_ready,
-        _wait_first=wait_first,
-        **kwargs):
+        *ch_ops: _ChOp, priority: bool = False,
+        _exec_first_ready: _ExecFn = _exec_first_ready,
+        _exec_first_ready_in_order: Callable[..., Any] = _exec_first_ready_in_order,
+        _exec_first_available_ready: Callable[..., Any] = _exec_first_available_ready,
+        _get_tasks_waiting_for_ready: Callable[..., list[Task[Any]]] = (
+            _get_tasks_waiting_for_ready),
+        _wait_first: _WaitFn = wait_first,
+        **kwargs: Any) -> tuple[Any, AnyChannel | str | None]:
     """Complete at most one channel operation.
 
     A "ch_op" is either a channel, which will be read from, or a tuple of
@@ -108,17 +126,17 @@ async def complete_one(
     elif 'default' in kwargs:
         return kwargs['default'], 'default'
 
-    ch_ops = list(ch_ops)
-    while ch_ops:
+    ch_ops_list = list(ch_ops)
+    while ch_ops_list:
         # Get this round's list of ready operations.
-        tasks = _get_tasks_waiting_for_ready(ch_ops)
+        tasks = _get_tasks_waiting_for_ready(ch_ops_list)
         done, _ = await _wait_first(*tasks)
 
         exec_ = _exec_first_available_ready
         if priority and len(done) > 1:
             exec_ = _exec_first_ready_in_order
 
-        out, ch_ops = exec_(done, tasks, ch_ops)
+        out, ch_ops_list = exec_(done, tasks, ch_ops_list)
         if out:
             return out
 

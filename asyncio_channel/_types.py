@@ -2,7 +2,12 @@ from __future__ import annotations
 
 __all__ = ('AnyChannel', 'BufferProtocol', 'ReadableChannel', 'WritableChannel')
 
+from asyncio import Task
+from collections.abc import Callable
 from typing import Any, Awaitable, Protocol
+
+# Type alias for the wait_first / wait_all helpers accepted as injection params.
+_WaitFn = Callable[..., Awaitable[tuple[set[Task[Any]], set[Task[Any]]]]]
 
 
 class BufferProtocol(Protocol):
@@ -27,7 +32,10 @@ class ReadableChannel(Protocol):
     def closed(self) -> Awaitable[None]: ...
     def item(self, *, timeout: float | None = None) -> Awaitable[bool]: ...
     def poll(self, *, default: Any = None) -> Any: ...
-    def take(self, *, timeout: float | None = None, default: Any = None) -> Awaitable[Any]: ...
+    def take(self, *, timeout: float | None = None,
+             default: Any = None) -> Awaitable[Any]: ...
+    def __aiter__(self) -> ReadableChannel: ...
+    async def __anext__(self) -> Any: ...
 
 
 class WritableChannel(Protocol):

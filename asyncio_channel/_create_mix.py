@@ -1,14 +1,20 @@
+from __future__ import annotations
+
 __all__ = ('create_mix',)
 
-from asyncio import Event, create_task
+from asyncio import Event, Task, create_task
+from collections.abc import Callable, Coroutine
 from itertools import chain
+from typing import Any
 
 from ._channel import Channel
 from ._mixin import ReprMixin
+from ._types import AnyChannel, _WaitFn
 from ._util import _task_done_callback, wait_all, wait_first
 
 
-def _range_from(start, end, at, *, _chain=chain):
+def _range_from(start: int, end: int, at: int, *,
+                _chain: Callable[..., Any] = chain) -> Any:
     """Produce a sequence [start, end), beginning at "at".
 
     If "at" is greater than "start" and sequence reaches "end",
@@ -21,9 +27,12 @@ def _range_from(start, end, at, *, _chain=chain):
     return _chain(range(at, end), range(start, at))
 
 
-async def _mix(out, mix, restart, notify, *,
-               _range_from=_range_from, _wait_all=wait_all,
-               _wait_first=wait_first):
+async def _mix(out: AnyChannel, mix: list[Channel], restart: Event,
+               notify: Callable[[], None], *,
+               _range_from: Callable[..., Any] = _range_from,
+               _wait_all: _WaitFn = wait_all,
+               _wait_first: _WaitFn = wait_first,
+               ) -> None:
     """Transer items from mix channels to out channel."""
     at = 0
     while True:
@@ -70,9 +79,11 @@ async def _mix(out, mix, restart, notify, *,
     notify()  # that transfer task has ended.
 
 
-async def _drain(out, mute, restart, *,
-                 _range_from=_range_from, _wait_all=wait_all,
-                 _wait_first=wait_first):
+async def _drain(out: AnyChannel, mute: list[Channel], restart: Event, *,
+                 _range_from: Callable[..., Any] = _range_from,
+                 _wait_all: _WaitFn = wait_all,
+                 _wait_first: _WaitFn = wait_first,
+                 ) -> None:
     """Drain items from mute channels."""
     at = 0
     while True:
@@ -136,29 +147,36 @@ class ChannelMix(ReprMixin):
 
     _ALLOWED_MODES = (PRIORITY_OFF, PRIORITY_MUTE, PRIORITY_PAUSE)
 
-    def __init__(self, out, *,
-                 _create_task=create_task, _Event=Event, _mix=_mix,
-                 _drain=_drain,
-                 _task_done_callback=_task_done_callback):
-        self._srcs = {}
-        self._priority_mode = False
+    def __init__(self, out: AnyChannel, *,
+                 _create_task: Callable[..., Task[Any]] = create_task,
+                 _Event: Callable[[], Event] = Event,
+                 _mix: Callable[..., Coroutine[Any, Any, None]] = _mix,
+                 _drain: Callable[..., Coroutine[Any, Any, None]] = _drain,
+                 _task_done_callback: Callable[[Task[Any]], None] = _task_done_callback,
+                 ) -> None:
+        self._srcs: dict[int, dict[str, Any]] = {}
+        self._priority_mode: int = False
         self._done = False
-        self._mix = mix = []
-        self._mute = mute = []
-        self._restart_mix = restart_mix = _Event()
-        self._restart_mute = restart_mute = _Event()
+        mix: list[Channel] = []
+        self._mix = mix
+        mute: list[Channel] = []
+        self._mute = mute
+        restart_mix: Event = _Event()
+        self._restart_mix = restart_mix
+        restart_mute: Event = _Event()
+        self._restart_mute = restart_mute
         t1 = _create_task(_mix(out, mix, restart_mix, self._notify))
         t1.add_done_callback(_task_done_callback)
         t2 = _create_task(_drain(out, mute, restart_mute))
         t2.add_done_callback(_task_done_callback)
 
     @property
-    def priority_mode(self):
+    def priority_mode(self) -> int:
         return self._priority_mode
 
     @priority_mode.setter
-    def priority_mode(self, mode, *,
-                      _allowed_modes=_ALLOWED_MODES):
+    def priority_mode(self, mode: int, *,
+                      _allowed_modes: tuple[int, ...] = _ALLOWED_MODES) -> None:
         if mode not in _allowed_modes:
             raise ValueError('invalid priority mode')
 
@@ -166,9 +184,7 @@ class ChannelMix(ReprMixin):
             self._priority_mode = mode
             self._update()
 
-        return mode
-
-    def add_input(self, ch):
+    def add_input(self, ch: Channel) -> None:
         """Add input channel to mix.
 
         Associated flags are all set to False.
@@ -181,7 +197,7 @@ class ChannelMix(ReprMixin):
             self._mix.append(ch)
             self._restart()
 
-    def remove_input(self, ch):
+    def remove_input(self, ch: Channel) -> None:
         """Remove input channel from mix."""
         if self._done:
             return
@@ -206,7 +222,7 @@ class ChannelMix(ReprMixin):
         else:
             self._restart()
 
-    def remove_all_inputs(self):
+    def remove_all_inputs(self) -> None:
         """Remove all input channels from the mix."""
         if not self._done:
             self._srcs.clear()
@@ -214,7 +230,7 @@ class ChannelMix(ReprMixin):
             self._mute.clear()
             self._restart()
 
-    def toggle(self, *ch_opts):
+    def toggle(self, *ch_opts: Any) -> None:
         """Associate control flags with input channels.
 
         Control flags are specified as a dict with boolean entries for
@@ -228,7 +244,7 @@ class ChannelMix(ReprMixin):
         if len(ch_opts) % 2 != 0:
             raise ValueError('odd number of arguments')
 
-        new_srcs = {}
+        new_srcs: dict[int, dict[str, Any]] = {}
         get_src = self._srcs.get
         allowed_keys = {'priority', 'mute', 'pause'}
         for i in range(0, len(ch_opts), 2):
@@ -264,7 +280,7 @@ class ChannelMix(ReprMixin):
             self._srcs.update(new_srcs)
             self._update()
 
-    def _update(self):
+    def _update(self) -> None:
         """Update the mix and mute channel lists."""
         if self._done:
             return
@@ -278,7 +294,7 @@ class ChannelMix(ReprMixin):
             self._sort_mix()
         self._restart()
 
-    def _sort_mix(self):
+    def _sort_mix(self) -> None:
         """Sort channels for regular mix mode."""
         mix = self._mix
         mute = self._mute
@@ -294,7 +310,7 @@ class ChannelMix(ReprMixin):
                 add = add_mute if get_src_flag('mute') else add_mix
                 add(src['chan'])
 
-    def _sort_priority_mute(self):
+    def _sort_priority_mute(self) -> None:
         """Sort channels for priority-mute mode."""
         mix = self._mix
         mute = self._mute
@@ -311,7 +327,7 @@ class ChannelMix(ReprMixin):
             elif not get_src_flag('pause'):
                 add_mute(src['chan'])
 
-    def _sort_priority_pause(self):
+    def _sort_priority_pause(self) -> None:
         """Sort channels for priority-pause mode."""
         mix = self._mix
         add_mix = mix.append
@@ -322,17 +338,17 @@ class ChannelMix(ReprMixin):
             if src.get('priority'):
                 add_mix(src['chan'])
 
-    def _restart(self):
+    def _restart(self) -> None:
         """Signal tasks to restart."""
         self._restart_mix.set()
         self._restart_mute.set()
 
-    def _notify(self):
+    def _notify(self) -> None:
         """Clean up the mix."""
         self.remove_all_inputs()
         self._done = True
 
-    def _format(self):
+    def _format(self) -> str:
         return 'done' if self._done else 'active'
 
 

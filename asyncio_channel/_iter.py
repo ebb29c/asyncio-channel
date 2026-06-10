@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 __all__ = ('itermerge', 'iterzip')
 
-from asyncio import create_task
+from asyncio import Task, create_task
+from collections.abc import Callable
 from itertools import chain
+from typing import Any
 
+from ._types import ReadableChannel, _WaitFn
 from ._util import wait_all, wait_first
 
 SENTINEL = object()
@@ -18,19 +23,20 @@ class MergeIterator:
     Iteration is stopped when all channels are closed.
     """
 
-    def __init__(self, *chs):
+    def __init__(self, *chs: ReadableChannel) -> None:
         self._chs = chs
 
-    def __aiter__(self):
+    def __aiter__(self) -> MergeIterator:
         return self
 
     async def __anext__(self, *,
-                        _chain=chain,
-                        _create_task=create_task,
-                        _sentinel=SENTINEL,
-                        _wait_first=wait_first,):
-        tasks = []
-        task_to_ch = {}
+                        _chain: Callable[..., Any] = chain,
+                        _create_task: Callable[..., Task[Any]] = create_task,
+                        _sentinel: object = SENTINEL,
+                        _wait_first: _WaitFn = wait_first,
+                        ) -> Any:
+        tasks: list[Task[Any]] = []
+        task_to_ch: dict[int, ReadableChannel] = {}
         add_task = tasks.append
         for ch in self._chs:
             task = _create_task(ch.item())
@@ -40,7 +46,7 @@ class MergeIterator:
         done, pending = await _wait_first(*tasks)
 
         x = _sentinel
-        next_chs = []
+        next_chs: list[ReadableChannel] = []
         add_to_next = next_chs.append
         for task in _chain(done, pending):
             ch = task_to_ch[id(task)]
@@ -74,16 +80,17 @@ class ZipIterator:
     Iteration is stopped when any channel is closed.
     """
 
-    def __init__(self, *chs):
+    def __init__(self, *chs: ReadableChannel) -> None:
         self._chs = chs
 
-    def __aiter__(self):
+    def __aiter__(self) -> ZipIterator:
         return self
 
     async def __anext__(self, *,
-                        _create_task=create_task,
-                        _wait_all=wait_all,
-                        _wait_first=wait_first):
+                        _create_task: Callable[..., Task[Any]] = create_task,
+                        _wait_all: _WaitFn = wait_all,
+                        _wait_first: _WaitFn = wait_first,
+                        ) -> tuple[Any, ...]:
         """Return a tuple with the next items from each channel."""
         chs = self._chs
 
