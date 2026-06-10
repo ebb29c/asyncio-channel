@@ -74,6 +74,9 @@ async def _mix(out: AnyChannel, mix: list[Channel], restart: Event,
             if not ch.empty():  # Sanity check.
                 x = ch.poll()
                 out.offer(x)
+                # Resume the scan after this channel next time so that
+                # every channel is read with equal frequency.
+                at = (i + 1) % nmix
                 break
 
     notify()  # that transfer task has ended.
@@ -121,6 +124,9 @@ async def _drain(out: AnyChannel, mute: list[Channel], restart: Event, *,
             ch = mute[i]
             if not ch.empty():  # Sanity check.
                 ch.poll()
+                # Resume the scan after this channel next time so that
+                # every channel is drained with equal frequency.
+                at = (i + 1) % nmute
                 break
 
 

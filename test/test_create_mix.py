@@ -342,6 +342,34 @@ async def test_toggle_preserves_unmentioned_channels():
     await asyncio.wait_for(out.closed(), timeout=1.0)
 
 
+async def test_mix_round_robin_fairness():
+    """
+    GIVEN
+        A mix with two input channels, both holding several items.
+    WHEN
+        Items are transferred to the output channel.
+    EXPECT
+        Items are taken from the input channels in alternation rather
+        than draining the first channel before reading the second.
+    """
+    out = create_channel(10)
+    m = create_mix(out)
+    ch1 = create_channel(3)
+    ch2 = create_channel(3)
+    for i in range(3):
+        assert ch1.offer(f'a{i}')
+        assert ch2.offer(f'b{i}')
+    m.toggle(ch1, {}, ch2, {})
+    items = [await out.take(timeout=1.0) for _ in range(6)]
+    assert None not in items
+    # The first two transfers must come from different channels.
+    assert {items[0][0], items[1][0]} == {'a', 'b'}
+    # And reads must alternate throughout.
+    sources = [x[0] for x in items]
+    assert sources[0::2] != sources[1::2]
+    assert sorted(items) == ['a0', 'a1', 'a2', 'b0', 'b1', 'b2']
+    out.close()
+
 async def test_priority_mode_transitions():
     """
     GIVEN
