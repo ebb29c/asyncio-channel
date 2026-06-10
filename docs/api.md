@@ -89,7 +89,7 @@ for i in range(10):
 ---
 
 <a name="create_channel"></a>
-`asyncio_channel.create_channel(n_or_buffer=1)`
+`asyncio_channel.create_channel(buffer=1)`
 
 Get a new channel using given buffer, or if given a positive integer then a new [dropping_buffer](#dropping_buffer) will be used.
 
@@ -282,13 +282,13 @@ await b.take()  # => 42
 ---
 
 <a name="create_publication"></a>
-`asyncio_channel.create_publication(src, topic_fn, *, n_or_buffer=1)`
+`asyncio_channel.create_publication(src, topic_fn, *, buffer=1)`
 
 Create a publication for `src` channel.
 
 When an item is taken from `src` it is passed to `topic_fn` which returns a "topic" -- i.e. any hashable value.  The item is then distributed to all channels which subscribe to that topic.
 
-Topic channels are created with [create_channel()](#create_channel), and is passed `n_or_buffer`.
+Topic channels are created with [create_channel()](#create_channel), and is passed `buffer`.
 
 **Publication methods:**
 
@@ -375,9 +375,9 @@ async for a, b in iterzip(cha, chb):
 ---
 
 <a name="map"></a>
-`asyncio_channel.map(fn, chs, n_or_buffer=1)`
+`asyncio_channel.map(fn, chs, buffer=1)`
 
-Get a new channel where each put item is the result of `fn` applied to the set of items taken from all channels in `chs`.  The channel is created by calling [create_channel()](#create_channel) with `n_or_buffer`, and is closed when any input channel is closed.
+Get a new channel where each put item is the result of `fn` applied to the set of items taken from all channels in `chs`.  The channel is created by calling [create_channel()](#create_channel) with `buffer`, and is closed when any input channel is closed.
 
 If an exception occurs in the background task (including one raised by `fn`), the output channel is closed and the exception is forwarded to the [exception handler](#set_exception_handler).
 
@@ -397,9 +397,9 @@ await out.take()  # => 7
 ---
 
 <a name="merge"></a>
-`asyncio_channel.merge(chs, n_or_buffer=1)`
+`asyncio_channel.merge(chs, buffer=1)`
 
-Get a new channel that merges multiple channels.  The channel is created by calling [create_channel()](#create_channel) with `n_or_buffer`, and is closed when all input channels are closed.
+Get a new channel that merges multiple channels.  The channel is created by calling [create_channel()](#create_channel) with `buffer`, and is closed when all input channels are closed.
 
 If an exception occurs in the background transfer task, the output channel is closed and the exception is forwarded to the [exception handler](#set_exception_handler).
 
@@ -542,11 +542,11 @@ If `silent` is false then calls to `.capacity()`, `.offer()`, or `.put()` will r
 ---
 
 <a name="split"></a>
-`asyncio_channel.split(predicate, ch, true_n_or_buffer=1, false_n_or_buffer=1)`
+`asyncio_channel.split(predicate, ch, true_buffer=1, false_buffer=1)`
 
 Returns a two-tuple of new channels.  The channel at index zero will receive items from `ch` for which `predicate` returned true, the other items will be put on the channel at index one.
 
-Both channels are created with [create_channel()](#create_channel), which is passed the corresponding `*_n_or_buffer` argument.
+Both channels are created with [create_channel()](#create_channel), which is passed the corresponding `*_buffer` argument.
 
 Both channels will be closed when `ch` is closed.
 
