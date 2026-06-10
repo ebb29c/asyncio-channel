@@ -342,6 +342,44 @@ async def test_toggle_preserves_unmentioned_channels():
     await asyncio.wait_for(out.closed(), timeout=1.0)
 
 
+async def test_priority_mode_transitions():
+    """
+    GIVEN
+        A mix with one priority channel and one normal channel.
+    WHEN
+        priority_mode is changed between all three modes while items are active.
+    EXPECT
+        Items follow the new mode's routing rules after each transition.
+    """
+    out = create_channel(10)
+    m = create_mix(out)
+    ch_pri = create_channel()
+    ch_norm = create_channel()
+    m.toggle(ch_pri, {'priority': True}, ch_norm, {})
+
+    # PRIORITY_MUTE: only priority channel forwarded
+    m.priority_mode = m.PRIORITY_MUTE
+    assert ch_pri.offer('p1')
+    assert await out.take(timeout=1.0) == 'p1'
+
+    # PRIORITY_PAUSE: priority forwarded, non-priority not taken
+    m.priority_mode = m.PRIORITY_PAUSE
+    assert ch_norm.offer('n2')
+    assert ch_pri.offer('p2')
+    assert await out.take(timeout=1.0) == 'p2'
+    assert await out.take(timeout=0.1) is None
+    assert not ch_norm.empty()
+    ch_norm.poll()  # clear before PRIORITY_OFF step
+
+    # PRIORITY_OFF: both channels forwarded
+    m.priority_mode = m.PRIORITY_OFF
+    assert ch_pri.offer('p3')
+    assert ch_norm.offer('n3')
+    received = {await out.take(timeout=1.0), await out.take(timeout=1.0)}
+    assert received == {'p3', 'n3'}
+
+    out.close()
+
 async def test_mix_empty_mute_list_no_crash():
     """
     GIVEN

@@ -128,6 +128,30 @@ async def test_alts_multiple_ready_first_fails():
     assert ch1.empty()
     assert ch2.poll() == d
 
+async def test_alts_zero_ch_ops():
+    """
+    WHEN
+        complete_one is called with no ch_ops.
+    EXPECT
+        Returns (None, None) immediately.
+    """
+    out = await asyncio.wait_for(complete_one(), timeout=0.1)
+    assert out == (None, None)
+
+async def test_alts_all_closed():
+    """
+    WHEN
+        Every channel passed to complete_one is already closed and empty.
+    EXPECT
+        Returns (None, None) without blocking.
+    """
+    ch1 = create_channel()
+    ch2 = create_channel()
+    ch1.close()
+    ch2.close()
+    out = await asyncio.wait_for(complete_one(ch1, ch2), timeout=0.5)
+    assert out == (None, None)
+
 async def test_alts_multiple_ready_first_batch_fails():
     """
     WHEN
