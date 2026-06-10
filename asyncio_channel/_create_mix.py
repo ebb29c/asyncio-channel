@@ -63,6 +63,11 @@ async def _mix(out: AnyChannel, mix: list[Channel], restart: Event,
             # abandon the current attempt and restart to pick up changes.
             at = 0
             continue
+        if out.full():
+            # The capacity observed during the wait was consumed by
+            # another producer before an item arrived; wait again rather
+            # than dropping a polled item on a failed offer.
+            continue
 
         # Attempt to read from the mix channels with equal frequency by
         # checking the channel after the channel that was read during

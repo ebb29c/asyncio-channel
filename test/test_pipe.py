@@ -55,6 +55,36 @@ async def test_pipe():
     src.close()
     await asyncio.wait_for(dest.closed(), timeout=1.0)
 
+async def test_pipe_no_item_loss_when_dest_refills():
+    """
+    GIVEN
+        A pipe whose dest channel regained capacity, then was filled by
+        another producer before src received an item.
+    WHEN
+        An item arrives on src.
+    EXPECT
+        The item is not lost; it is transferred once dest has capacity
+        again.
+    """
+    src = create_channel()
+    dest = create_channel()
+    pipe(src, dest)
+    # Let the pipe task enter its wait so dest.capacity() has already
+    # completed (dest is empty at this point).
+    for _ in range(5):
+        await asyncio.sleep(0)
+    # Fill dest from elsewhere, then satisfy the src.item() wait.
+    assert dest.offer('blocker')
+    assert src.offer('x')
+    # Let the pipe task wake and run its loop body while dest is full.
+    for _ in range(5):
+        await asyncio.sleep(0)
+    assert await dest.take(timeout=1.0) == 'blocker'
+    # The polled item must not have been dropped on a failed offer.
+    assert await dest.take(timeout=1.0) == 'x'
+    src.close()
+    await asyncio.wait_for(dest.closed(), timeout=1.0)
+
 async def test_pipe_close():
     """
     GIVEN

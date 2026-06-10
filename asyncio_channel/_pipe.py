@@ -19,6 +19,11 @@ async def _pipe(src: ReadableChannel, dest: WritableChannel, close: bool,
 
             if src.empty() or dest.is_closed():
                 break
+            if dest.full():
+                # The capacity observed during the wait was consumed by
+                # another producer before an item arrived; wait again
+                # rather than dropping a polled item on a failed offer.
+                continue
 
             x = src.poll()
             dest.offer(x)

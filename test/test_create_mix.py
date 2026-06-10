@@ -370,6 +370,38 @@ async def test_mix_round_robin_fairness():
     assert sorted(items) == ['a0', 'a1', 'a2', 'b0', 'b1', 'b2']
     out.close()
 
+async def test_mix_no_item_loss_when_out_refills():
+    """
+    GIVEN
+        A mix whose out channel regained capacity, then was filled by
+        another producer before any input received an item.
+    WHEN
+        An item arrives on an input channel.
+    EXPECT
+        The item is not lost; it is transferred once out has capacity
+        again.
+    """
+    out = create_channel()
+    m = create_mix(out)
+    ch = create_channel()
+    m.add_input(ch)
+    # Let the mix task enter its wait so out.capacity() has already
+    # completed (out is empty at this point).  The mix's wait chain is
+    # several tasks deep, so yield enough times for it to settle.
+    for _ in range(10):
+        await asyncio.sleep(0)
+    # Fill out from elsewhere, then satisfy the ch.item() wait.
+    assert out.offer('blocker')
+    assert ch.offer('x')
+    # Let the mix task wake and run its loop body while out is full.
+    for _ in range(10):
+        await asyncio.sleep(0)
+    assert await out.take(timeout=1.0) == 'blocker'
+    # The polled item must not have been dropped on a failed offer.
+    assert await out.take(timeout=1.0) == 'x'
+    assert ch.empty()
+    out.close()
+
 async def test_priority_mode_transitions():
     """
     GIVEN
