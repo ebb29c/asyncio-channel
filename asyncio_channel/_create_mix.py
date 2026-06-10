@@ -69,6 +69,13 @@ async def _mix(out: AnyChannel, mix: list[Channel], restart: Event,
             # than dropping a polled item on a failed offer.
             continue
 
+        # Prune inputs that are closed and exhausted; their item() waits
+        # complete immediately and would otherwise busy-spin this loop.
+        for ch in [c for c in mix if c.is_closed() and c.empty()]:
+            mix.remove(ch)
+        if not mix:
+            continue
+
         # Attempt to read from the mix channels with equal frequency by
         # checking the channel after the channel that was read during
         # the last attempt.
@@ -118,6 +125,13 @@ async def _drain(out: AnyChannel, mute: list[Channel], restart: Event, *,
             # One or more mute channels should no longer be included,
             # abandon the current attempt and restart to pick up changes.
             at = 0
+            continue
+
+        # Prune inputs that are closed and exhausted; their item() waits
+        # complete immediately and would otherwise busy-spin this loop.
+        for ch in [c for c in mute if c.is_closed() and c.empty()]:
+            mute.remove(ch)
+        if not mute:
             continue
 
         # Attempt to read from the mix channels with equal frequency by

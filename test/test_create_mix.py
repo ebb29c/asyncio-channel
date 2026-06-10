@@ -402,6 +402,61 @@ async def test_mix_no_item_loss_when_out_refills():
     assert ch.empty()
     out.close()
 
+async def test_mix_prunes_closed_input():
+    """
+    GIVEN
+        A mix with two input channels.
+    WHEN
+        One input channel is closed (but not removed from the mix).
+    EXPECT
+        The closed channel is pruned from the wait list, so the mix
+        does not busy-spin, and the remaining input keeps working.
+    """
+    out = create_channel(10)
+    m = create_mix(out)
+    ch1 = create_channel()
+    ch2 = create_channel()
+    m.toggle(ch1, {}, ch2, {})
+    ch1.close()
+    # Let the mix task wake on the closed channel and prune it.
+    for _ in range(10):
+        await asyncio.sleep(0)
+    assert ch1 not in m._mix
+    assert ch2 in m._mix
+    assert ch2.offer('x')
+    assert await out.take(timeout=1.0) == 'x'
+    out.close()
+
+async def test_drain_prunes_closed_input():
+    """
+    GIVEN
+        A mix with two muted input channels.
+    WHEN
+        One muted channel is closed (but not removed from the mix).
+    EXPECT
+        The closed channel is pruned from the drain wait list, so the
+        drain task does not busy-spin, and the other muted channel is
+        still drained.
+    """
+    out = create_channel(10)
+    m = create_mix(out)
+    ch1 = create_channel()
+    ch2 = create_channel()
+    m.toggle(ch1, {'mute': True}, ch2, {'mute': True})
+    ch1.close()
+    # Let the drain task wake on the closed channel and prune it.
+    for _ in range(10):
+        await asyncio.sleep(0)
+    assert ch1 not in m._mute
+    assert ch2 in m._mute
+    assert ch2.offer('x')
+    # Muted items are taken but not forwarded.
+    for _ in range(10):
+        await asyncio.sleep(0)
+    assert ch2.empty()
+    assert out.empty()
+    out.close()
+
 async def test_priority_mode_transitions():
     """
     GIVEN
