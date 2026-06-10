@@ -1,4 +1,4 @@
-from asyncio_channel import complete_one, create_channel
+from asyncio_channel import complete_one, create_channel, shield_from_close
 
 import asyncio
 import pytest
@@ -127,6 +127,63 @@ async def test_alts_multiple_ready_first_fails():
     assert out == (True, ch2)
     assert ch1.empty()
     assert ch2.poll() == d
+
+async def test_alts_take_from_shielded_channel():
+    """
+    WHEN
+        A take operation on a channel wrapped in a shield (a readable
+        channel that is not a Channel instance).
+    EXPECT
+        The take completes; the shield is not mistaken for a put tuple.
+    """
+    ch = create_channel()
+    shielded = shield_from_close(ch)
+    ch.offer('x')
+    out = await asyncio.wait_for(complete_one(shielded), timeout=0.5)
+    assert out == ('x', shielded)
+
+async def test_alts_put_unhashable_value_retry():
+    """
+    WHEN
+        Put operations carry unhashable values and the first ready
+        channel fails (closed), forcing the retry path.
+    EXPECT
+        No TypeError from hashing ch_ops; the put completes on the
+        remaining channel.
+    """
+    a = create_channel()
+    a.offer('a')
+    b = create_channel()
+    b.offer('b')
+    def free_and_close_a():
+        a.poll()
+        a.close()
+    asyncio.get_running_loop().call_later(0.05, free_and_close_a)
+    asyncio.get_running_loop().call_later(0.1, b.poll)
+    va = {'k': 'a'}
+    vb = {'k': 'b'}
+    out = await asyncio.wait_for(complete_one((a, va), (b, vb)), timeout=0.5)
+    assert out == (True, b)
+    assert b.poll() == vb
+
+async def test_alts_priority_order_preserved_after_retry():
+    """
+    WHEN
+        priority is True, the first channel becomes a dud (closed
+        empty), and the remaining channels later become ready together.
+    EXPECT
+        The operation completes on the earliest remaining channel in
+        the original argument order.
+    """
+    chs = [create_channel() for _ in range(4)]
+    def ready_rest():
+        for ch, x in zip(chs[1:], 'bcd'):
+            ch.offer(x)
+    asyncio.get_running_loop().call_later(0.05, chs[0].close)
+    asyncio.get_running_loop().call_later(0.1, ready_rest)
+    out = await asyncio.wait_for(
+        complete_one(*chs, priority=True), timeout=0.5)
+    assert out == ('b', chs[1])
 
 async def test_alts_zero_ch_ops():
     """

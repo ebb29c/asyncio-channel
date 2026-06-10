@@ -6,7 +6,6 @@ from asyncio import Task, create_task
 from collections.abc import Callable
 from typing import Any
 
-from ._channel import Channel
 from ._types import AnyChannel, ReadableChannel, WritableChannel, _WaitFn
 from ._util import wait_first
 
@@ -18,11 +17,11 @@ _ExecFn = Callable[..., tuple[Any, AnyChannel] | None]
 
 def _exec_first_ready(
         ch_ops: tuple[_ChOp, ...] | list[_ChOp],
-        channel: type[Channel] = Channel,
 ) -> tuple[Any, AnyChannel] | None:
     """Execute the first ch_op which is ready."""
+    # A take-op is any readable channel; a put-op is a (channel, x) tuple.
     for ch_op in ch_ops:
-        if isinstance(ch_op, channel):
+        if not isinstance(ch_op, tuple):
             ch = ch_op
             if not ch.empty():
                 x = ch.poll()
@@ -37,13 +36,12 @@ def _exec_first_ready(
 
 def _get_tasks_waiting_for_ready(
         ch_ops: list[_ChOp],
-        channel: type[Channel] = Channel,
         create_task: Callable[..., Task[Any]] = create_task,
 ) -> list[Task[Any]]:
     """Get tasks which wait for each ch_op to be ready."""
     tasks = []
     for ch_op in ch_ops:
-        if isinstance(ch_op, Channel):
+        if not isinstance(ch_op, tuple):
             tasks.append(create_task(ch_op.item()))
         else:
             ch, _ = ch_op
@@ -85,15 +83,17 @@ def _exec_first_available_ready(
     Returns a tuple of (execution_output, retry_ch_opts), one element will be
     None.
     """
-    duds: list[_ChOp] = []
+    dud_ids: set[int] = set()
     for task in ready_tasks:
         index = all_tasks.index(task)
         ready = ch_ops[index]
         out = _exec_first_ready((ready,))
         if out:
             return out, None
-        duds.append(ch_ops[index])
-    return None, list(frozenset(ch_ops).difference(duds))
+        dud_ids.add(index)
+    # Preserve argument order (required for priority semantics) and
+    # avoid hashing ch_ops (put-op values may be unhashable).
+    return None, [op for i, op in enumerate(ch_ops) if i not in dud_ids]
 
 
 async def complete_one(
