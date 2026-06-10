@@ -218,9 +218,7 @@ class ChannelMix(ReprMixin):
             return
 
         self._srcs[id(ch)] = {'chan': ch}
-        if not self._priority_mode:
-            self._mix.append(ch)
-            self._restart()
+        self._update()
 
     def remove_input(self, ch: Channel) -> None:
         """Remove input channel from mix."""

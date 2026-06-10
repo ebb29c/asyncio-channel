@@ -457,6 +457,29 @@ async def test_drain_prunes_closed_input():
     assert out.empty()
     out.close()
 
+async def test_add_input_in_priority_mute_mode():
+    """
+    GIVEN
+        A mix in PRIORITY_MUTE mode.
+    WHEN
+        A non-priority channel is added with add_input().
+    EXPECT
+        The channel is treated as muted: items are taken but not put on
+        the output channel.
+    """
+    out = create_channel(10)
+    m = create_mix(out)
+    m.priority_mode = m.PRIORITY_MUTE
+    ch = create_channel()
+    m.add_input(ch)
+    assert ch.offer('x')
+    # Let the drain task take the muted item.
+    for _ in range(10):
+        await asyncio.sleep(0)
+    assert ch.empty()
+    assert out.empty()
+    out.close()
+
 async def test_priority_mode_transitions():
     """
     GIVEN
