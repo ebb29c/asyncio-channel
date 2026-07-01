@@ -2,7 +2,7 @@ from __future__ import annotations
 
 __all__ = ('Channel',)
 
-from asyncio import Event
+from asyncio import Event, get_running_loop
 from collections.abc import Callable
 from typing import Any
 
@@ -61,13 +61,24 @@ class Channel(ReprMixin):
         capacity = self._capacity.wait
         closed = self.closed
 
+        # The timeout is a total deadline; compute it once so that
+        # spurious wakeups don't restart the clock.
+        deadline = None
+        if timeout is not None:
+            deadline = get_running_loop().time() + timeout
+
         # The capacity Event will wake all blocked coroutines.  If the
         # channel still has capacity when unblocked then return, otherwise
         # block again.  If the caller doesn't utilize the capacity then
         # the next unblocked coroutines will get a chance.
         while full() and not is_closed():
+            remaining = None
+            if deadline is not None:
+                remaining = deadline - get_running_loop().time()
+                if remaining <= 0:
+                    return False
             done, _ = await _wait_first(capacity(), closed(),
-                                        timeout=timeout)
+                                        timeout=remaining)
             if not done:
                 return False
 
@@ -87,13 +98,24 @@ class Channel(ReprMixin):
         item = self._item.wait
         closed = self.closed
 
+        # The timeout is a total deadline; compute it once so that
+        # spurious wakeups don't restart the clock.
+        deadline = None
+        if timeout is not None:
+            deadline = get_running_loop().time() + timeout
+
         # The item Event will wake all blocked coroutines.  If the
         # channel still has an item when unblocked then return, otherwise
         # block again.  If the caller doesn't take the item then
         # the next unblocked coroutines will get a chance.
         while empty() and not is_closed():
+            remaining = None
+            if deadline is not None:
+                remaining = deadline - get_running_loop().time()
+                if remaining <= 0:
+                    return False
             done, _ = await _wait_first(item(), closed(),
-                                        timeout=timeout)
+                                        timeout=remaining)
             if not done:
                 return False
 

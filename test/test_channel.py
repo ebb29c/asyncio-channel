@@ -639,3 +639,46 @@ async def test_aiter():
     async for x in ch:
         buf.append(x)
     assert buf == xs
+
+async def test_item_timeout_is_total_deadline():
+    """
+    GIVEN
+        Two coroutines waiting for an item on the same channel.
+    WHEN
+        One item arrives (waking both, satisfying one) partway through
+        the loser's timeout window.
+    EXPECT
+        The loser's item() timeout does not restart on the spurious
+        wakeup; it returns False once the original deadline passes.
+    """
+    q = asyncio.Queue(1)
+    ch = Channel(q)
+    winner = asyncio.create_task(ch.take())
+    loser = asyncio.create_task(ch.item(timeout=0.3))
+    await asyncio.sleep(0.2)
+    ch.offer('x')  # Wakes both waiters; winner takes the item.
+    assert await winner == 'x'
+    # The loser saw a spurious wakeup at ~0.2s; its 0.3s deadline must
+    # not restart -- it should return False ~0.1s from now, not ~0.3s.
+    assert await asyncio.wait_for(loser, timeout=0.2) is False
+
+async def test_capacity_timeout_is_total_deadline():
+    """
+    GIVEN
+        A full channel with two coroutines waiting for capacity.
+    WHEN
+        Capacity opens (waking both, consumed by one) partway through
+        the loser's timeout window.
+    EXPECT
+        The loser's capacity() timeout does not restart on the spurious
+        wakeup; it returns False once the original deadline passes.
+    """
+    q = asyncio.Queue(1)
+    ch = Channel(q)
+    ch.offer('full')
+    winner = asyncio.create_task(ch.put('y'))
+    loser = asyncio.create_task(ch.capacity(timeout=0.3))
+    await asyncio.sleep(0.2)
+    ch.poll()  # Frees capacity; winner refills the channel.
+    assert await winner is True
+    assert await asyncio.wait_for(loser, timeout=0.2) is False
