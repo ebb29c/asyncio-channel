@@ -59,3 +59,24 @@ async def test_iterzip():
         if i == len(seq2):
             ch2.close()
     await asyncio.sleep(0.05)
+
+async def test_itermerge_sheds_closed_channels():
+    """
+    GIVEN
+        A merge iterator over two channels, one of which closes.
+    WHEN
+        The closed channel is exhausted.
+    EXPECT
+        It is dropped from the iterator's wait set so later iterations
+        no longer wait on it.
+    """
+    a = create_channel()
+    b = create_channel()
+    it = itermerge(a, b)
+    a.offer('x')
+    a.close()
+    assert await it.__anext__() == 'x'
+    b.offer('y')
+    assert await it.__anext__() == 'y'
+    assert a not in it._chs
+    assert b in it._chs

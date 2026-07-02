@@ -18,7 +18,9 @@ async def _map(fn: Callable[..., Any], chs: Iterable[ReadableChannel],
     try:
         async for items in iterzip(*chs):
             x = fn(*items)
-            await out.put(x)
+            if not await out.put(x):
+                # Output was closed by the consumer; stop mapping.
+                break
         out.close()
     except Exception:
         out.close()

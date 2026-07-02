@@ -17,7 +17,9 @@ async def _wait(chs: Iterable[ReadableChannel], out: Channel,
                 itermerge: Callable[..., Any] = itermerge) -> None:
     try:
         async for x in itermerge(*chs):
-            await out.put(x)
+            if not await out.put(x):
+                # Output was closed by the consumer; stop merging.
+                break
         out.close()
     except Exception:
         out.close()

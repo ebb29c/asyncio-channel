@@ -60,6 +60,10 @@ class MergeIterator:
                     x = ch.poll()
             add_to_next(ch)
 
+        # Shed closed channels so they aren't waited on (and don't cost
+        # a task each) on every subsequent iteration.
+        self._chs = tuple(next_chs)
+
         if x is _sentinel:
             # Didn't find an item, so stop.
             raise StopAsyncIteration

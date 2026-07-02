@@ -30,3 +30,25 @@ async def test_split():
     ch.close()
     await asyncio.wait_for(t_out.closed(), timeout=1.0)
     await asyncio.wait_for(f_out.closed(), timeout=1.0)
+
+async def test_split_stops_when_both_outs_closed():
+    """
+    GIVEN
+        A split whose output channels are both closed by consumers.
+    WHEN
+        The input channel still holds items.
+    EXPECT
+        The background task stops draining the input channel.
+    """
+    src = create_channel(5)
+    for i in (1, 2, 3, 4, 5):
+        assert src.offer(i)
+    is_even = lambda n: n % 2 == 0
+    evens, odds = split(is_even, src, 1, 1)
+    evens.close()
+    odds.close()
+    # Let the background task observe the closed outputs and stop.
+    for _ in range(10):
+        await asyncio.sleep(0)
+    # At most the in-flight items are consumed; the tail must remain.
+    assert not src.empty()

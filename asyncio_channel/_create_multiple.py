@@ -56,6 +56,10 @@ class ChannelMultiple(ReprMixin):
     Items put on the input channel will be copied to all output channels.
 
     If no output channels are present then items put on input will be dropped.
+
+    Each item is delivered to every output before the next item is
+    taken from the input, so a full output channel applies backpressure
+    to the whole multiple.
     """
 
     def __init__(self, src: ReadableChannel, *,

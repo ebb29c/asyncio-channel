@@ -19,6 +19,9 @@ async def _split(predicate: Callable[[Any], bool], ch: ReadableChannel,
         async for x in ch:
             out = true_out if predicate(x) else false_out
             await out.put(x)
+            if true_out.is_closed() and false_out.is_closed():
+                # Both outputs were closed by consumers; stop sorting.
+                break
         true_out.close()
         false_out.close()
     except Exception:
