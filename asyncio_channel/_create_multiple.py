@@ -34,7 +34,7 @@ async def _start(src: ReadableChannel,
 
             x = src.poll()
             if outs:
-                await wait_all(*(_put(ch, x) for ch, _ in outs))
+                await _wait_all(*(_put(ch, x) for ch, _ in outs))
     except Exception:
         for ch, close in outs:
             if close:

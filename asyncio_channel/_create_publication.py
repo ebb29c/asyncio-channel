@@ -74,7 +74,7 @@ class Publication(ReprMixin):
             src = _create_channel(self._buffer)
             topics[topic] = src
 
-            m = create_multiple(src)
+            m = _create_multiple(src)
             self._mults[topic] = m
 
         self._mults[topic].add_output(ch, close=close)
