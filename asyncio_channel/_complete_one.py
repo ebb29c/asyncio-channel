@@ -22,15 +22,13 @@ def _exec_first_ready(
     # A take-op is any readable channel; a put-op is a (channel, x) tuple.
     for ch_op in ch_ops:
         if not isinstance(ch_op, tuple):
-            ch = ch_op
-            if not ch.empty():
-                x = ch.poll()
-                return x, ch
+            rch = ch_op
+            if not rch.empty():
+                return rch.poll(), rch
         else:
-            ch, x = ch_op
-            status = ch.offer(x)
-            if status:
-                return True, ch
+            wch, x = ch_op
+            if wch.offer(x):
+                return True, wch
     return None
 
 
