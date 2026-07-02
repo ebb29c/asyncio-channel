@@ -35,6 +35,14 @@ class ChannelDecoratorBase(ReprMixin):
         self._channel = channel
         self._silent = silent
 
+    # Special methods are not picked up by _delegate_methods (instance
+    # attribute lookup is bypassed for dunders), so delegate explicitly.
+    def __aiter__(self) -> ChannelDecoratorBase:
+        return self
+
+    async def __anext__(self) -> Any:
+        return await self._channel.__anext__()
+
     def _format(self) -> str:
         return f'channel={self._channel!r}'
 
@@ -89,6 +97,12 @@ class ReadShield(ChannelDecoratorBase):
             raise ProhibitedOperationError('take')
         return default
 
+    async def __anext__(self) -> Any:
+        # Async iteration reads from the channel, so it is shielded too.
+        if not self._silent:
+            raise ProhibitedOperationError('__anext__')
+        raise StopAsyncIteration
+
 
 shield_from_read = ReadShield
 
@@ -96,7 +110,7 @@ shield_from_read = ReadShield
 class WriteShield(ChannelDecoratorBase):
     """Shield a channel from having items written.
 
-    If silent is false then calling .capacit(), .offer(), or
+    If silent is false then calling .capacity(), .offer(), or
     .put() will raise a ProhibitedOperationError.
     """
 
@@ -111,13 +125,12 @@ class WriteShield(ChannelDecoratorBase):
             raise ProhibitedOperationError('capacity')
         return False
 
-    def offer(self, x: Any, *, default: Any = None) -> bool:
+    def offer(self, x: Any) -> bool:
         if not self._silent:
             raise ProhibitedOperationError('offer')
         return False
 
-    async def put(self, x: Any, default: Any = None,
-                  timeout: float | None = None) -> bool:
+    async def put(self, x: Any, *, timeout: float | None = None) -> bool:
         if not self._silent:
             raise ProhibitedOperationError('put')
         return False

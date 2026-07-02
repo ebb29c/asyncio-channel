@@ -209,3 +209,58 @@ async def test_shield_combined():
         dch.offer('a')
     with pytest.raises(ProhibitedOperationError, match='put'):
         await dch.put('b')
+
+async def test_shield_async_iteration():
+    """
+    GIVEN
+        A channel with buffered items, shielded from close.
+    WHEN
+        The shield is iterated with 'async for'.
+    EXPECT
+        Items are yielded and iteration stops when the underlying
+        channel is closed and exhausted.
+    """
+    ch = create_channel(3)
+    for x in 'abc':
+        assert ch.offer(x)
+    ch.close()
+    dch = shield_from_close(ch)
+    buf = [x async for x in dch]
+    assert buf == ['a', 'b', 'c']
+
+async def test_read_shield_async_iteration_prohibited():
+    """
+    GIVEN
+        A channel shielded from read operations.
+    WHEN
+        The shield is iterated with 'async for'.
+    EXPECT
+        ProhibitedOperationError, or empty iteration when silent.
+    """
+    ch = create_channel()
+    ch.offer('x')
+    dch = shield_from_read(ch)
+    with pytest.raises(ProhibitedOperationError, match='__anext__'):
+        async for _ in dch:
+            pass
+    dch = shield_from_read(ch, silent=True)
+    assert [x async for x in dch] == []
+    assert not ch.empty()
+
+async def test_write_shield_signatures_match_channel():
+    """
+    GIVEN
+        A channel shielded from write operations.
+    WHEN
+        offer()/put() are called with Channel's signatures.
+    EXPECT
+        Same parameter shape as Channel: no extra 'default' parameter
+        and 'timeout' is keyword-only.
+    """
+    dch = shield_from_write(create_channel(), silent=True)
+    assert dch.offer('a') is False
+    assert await dch.put('b', timeout=0.01) is False
+    with pytest.raises(TypeError):
+        dch.offer('a', 'extra')
+    with pytest.raises(TypeError):
+        await dch.put('b', 0.01)  # timeout must be keyword-only
