@@ -682,3 +682,20 @@ async def test_capacity_timeout_is_total_deadline():
     ch.poll()  # Frees capacity; winner refills the channel.
     assert await winner is True
     assert await asyncio.wait_for(loser, timeout=0.2) is False
+
+async def test_take_item_identical_to_default():
+    """
+    GIVEN
+        A channel holding an item identical to the caller's default.
+    WHEN
+        take(default=...) is called.
+    EXPECT
+        The item is returned immediately; it is not discarded and the
+        call does not block waiting for another item.
+    """
+    q = asyncio.Queue(1)
+    ch = Channel(q)
+    ch.offer(0)
+    x = await asyncio.wait_for(ch.take(default=0), timeout=0.5)
+    assert x == 0
+    assert ch.empty()

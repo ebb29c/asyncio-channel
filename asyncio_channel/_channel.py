@@ -10,6 +10,10 @@ from ._mixin import ReprMixin
 from ._types import BufferProtocol, _WaitFn
 from ._util import wait_first
 
+# Internal marker distinguishing "no item" from an item that happens to
+# equal a caller-supplied default.
+_SENTINEL = object()
+
 
 class Channel(ReprMixin):
     """A channel, useful for coordinating producer and consumer coroutines.
@@ -168,10 +172,10 @@ class Channel(ReprMixin):
         Return an item, if available, otherwise block until an item becomes
         available.  Return default if timeout is given and has expired.
         """
-        x = self.poll(default=default)
-        if x is default and await self.item(timeout=timeout):
-            x = self.poll(default=default)
-        return x
+        x = self.poll(default=_SENTINEL)
+        if x is _SENTINEL and await self.item(timeout=timeout):
+            x = self.poll(default=_SENTINEL)
+        return default if x is _SENTINEL else x
 
     def _update_state(self) -> None:
         """Update waitable state flags."""
