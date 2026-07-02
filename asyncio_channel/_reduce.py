@@ -19,7 +19,10 @@ async def _reduce(out: Channel, fn: Callable[[Any, Any], Any],
         acc = init
         async for x in ch:
             acc = fn(acc, x)
-        await out.put(acc)
+        # None is not allowed on a channel; a take() from the closed
+        # result channel returns None either way.
+        if acc is not None:
+            await out.put(acc)
         out.close()
     except Exception:
         out.close()
