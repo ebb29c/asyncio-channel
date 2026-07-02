@@ -91,7 +91,7 @@ for i in range(10):
 <a name="create_channel"></a>
 `asyncio_channel.create_channel(buffer=1)`
 
-Get a new channel using given buffer, or if given a positive integer then a new [dropping_buffer](#dropping_buffer) will be used.
+Get a new channel using given buffer, or if given a positive integer then a new [blocking buffer](#create_blocking_buffer) of that capacity will be used.
 
 A channel is a sequence type which supports adding and removing items both synchronously and asynchronously.  A channel may be "closed", preventing any more items from being added.  Items may still be removed even after the channel is closed.
 
@@ -184,7 +184,7 @@ Each input channel has multiple associated flags which may be set using `.toggle
 
 - `'mute'`
 
-  If `True` then items will be taken from channel but put on `out`.  Default is `False`.
+  If `True` then items will be taken from channel but *not* put on `out`.  Default is `False`.
 
 - `'pause'`
   If `True` then items will *not* be taken from channel.  Default is `False`.
@@ -248,6 +248,8 @@ await out.take()  # => 99
 `asyncio_channel.create_multiple(src)`
 
 Create a multiple of `src`.  Items will be taken from `src` and distributed to each output channel.
+
+Each item is delivered to every output before the next item is taken from `src`, so a full output channel applies backpressure to the whole multiple.
 
 **ChannelMultiple methods:**
 

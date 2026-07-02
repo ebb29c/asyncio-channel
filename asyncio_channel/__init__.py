@@ -8,7 +8,7 @@ __all__ = ('ProhibitedOperationError', 'complete_one',
            'pipe', 'reduce', 'set_exception_handler', 'shield_from_close',
            'shield_from_read', 'shield_from_write', 'split')
 
-__version__ = '0.10.0'
+__version__ = '0.10.1'
 
 from ._complete_one import complete_one
 from ._buffer import (create_blocking_buffer, create_dropping_buffer,
