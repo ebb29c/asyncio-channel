@@ -1,6 +1,6 @@
 # asyncio-channel
 
-[![Build Status](https://travis-ci.org/ebb29c/asyncio-channel.svg?branch=main)](https://travis-ci.org/ebb29c/asyncio-channel)
+[![CI](https://github.com/ebb29c/asyncio-channel/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ebb29c/asyncio-channel/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ebb29c/asyncio-channel/branch/main/graph/badge.svg)](https://codecov.io/gh/ebb29c/asyncio-channel)
 
 Asynchronous channels for communication and synchronization between `asyncio` coroutines.
@@ -38,18 +38,17 @@ From [pypi](https://pypi.org/project/asyncio-channel)
 $ pip install asyncio-channel
 ```
 
+Requires Python 3.11 or newer.
+
 ## Setup for development
 
-*Tip*: Use [pyenv](https://github.com/pyenv/pyenv) and [virtualenv](https://virtualenv.pypa.io/en/latest).
+*Tip*: Use [pyenv](https://github.com/pyenv/pyenv) to manage Python versions.
 
 ```sh
-$ mkdir asyncio-channel-fork
-$ cd asyncio-channel-fork
-$ pyenv local 3.7.4
-$ virtualenv .
-$ . bin/activate
 $ git clone https://github.com/ebb29c/asyncio-channel.git
 $ cd asyncio-channel
+$ python3 -m venv .venv
+$ . .venv/bin/activate
 $ make install
 $ make test
 ```
@@ -57,8 +56,16 @@ $ make test
 Other `make` targets:
 - `test-cov`: run tests with code coverage
 - `test-cov-html`: run tests and generate html code coverage report
-- `test-cov-xml`: run tests and genrate xml code coverage report
+- `test-cov-xml`: run tests and generate xml code coverage report
 - `lint`: run linter
+- `lint-fix`: run linter and apply fixes
+- `format`: format the code
+- `typecheck`: run mypy
+
+## Releasing
+
+See [docs/releasing.md](docs/releasing.md); pushing a version tag runs the
+automated release pipeline.
 
 ## License
 
